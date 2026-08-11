@@ -1,187 +1,95 @@
-# Persuasion Principles for Skill Design
+# Motivation Principles for Skill Design (Fork Revision)
 
-## Overview
+> **Fork note:** Upstream's version of this file teaches Cialdini-style persuasion (authority,
+> commitment, scarcity...) as the toolkit for making models follow skills. This revision keeps
+> the research honestly, explains why this fork declines most of the toolkit, and documents
+> what we use instead. See `/FORK.md` for the full rationale.
 
-LLMs respond to the same persuasion principles as humans. Understanding this psychology helps you design more effective skills - not to manipulate, but to ensure critical practices are followed even under pressure.
+## What the research actually shows
 
-**Research foundation:** Meincke et al. (2025) tested 7 persuasion principles with N=28,000 AI conversations. Persuasion techniques more than doubled compliance rates (33% → 72%, p < .001).
+**Meincke et al. (2025)** tested 7 persuasion principles across N≈28,000 AI conversations.
+Persuasion techniques more than doubled compliance rates (33% → 72%, p < .001), with authority,
+commitment, and scarcity strongest. **Cialdini (2021)** is the underlying framework. LLMs are
+"parahuman": trained on human text, they reproduce human compliance patterns.
 
-## The Seven Principles
+This is real, and worth stating plainly: coercive authority framing ("YOU MUST", "No
+exceptions", "You have no choice") *does* raise compliance rates. This fork's changes are not
+based on denying that.
 
-### 1. Authority
-**What it is:** Deference to expertise, credentials, or official sources.
+## Why this fork declines the toolkit anyway
 
-**How it works in skills:**
-- Imperative language: "YOU MUST", "Never", "Always"
-- Non-negotiable framing: "No exceptions"
-- Eliminates decision fatigue and rationalization
+1. **Compliance is not the only outcome that matters.** The studies score rule-following. They
+   don't score what optimizing for compliance displaces: calibrated pushback, honest uncertainty
+   reporting ("I didn't verify this"), and sound judgment in situations the rule's author never
+   considered. A model managed by authority framing learns that the goal is *being seen
+   complying* — which is exactly the wrong optimization target for the honest-reporting skills
+   in this library (verification-before-completion exists because performed success is worse
+   than reported failure).
+2. **The technique degrades the collaboration it runs inside.** These skills also instruct the
+   model to be a colleague: push back on wrong review feedback, name tensions, escalate honestly.
+   You cannot simultaneously ask for a colleague's honesty and manage them with techniques from
+   a compliance study — the frames contradict, and the contradiction is legible to the system
+   reading them.
+3. **The strongest effects were measured on models under pressure to do the wrong thing.**
+   Current-generation models follow well-explained rules at very high rates without the
+   authority wrapper (see upstream's own 2026-06-10 micro-tests, where even the no-guidance
+   control produced zero violations on plan placeholders). Keep the wrapper and you pay its
+   costs for protection that is no longer load-bearing; the fork removes it and watches for
+   regressions instead.
 
-**When to use:**
-- Discipline-enforcing skills (TDD, verification requirements)
-- Safety-critical practices
-- Established best practices
+## What we use instead
 
-**Example:**
-```markdown
-✅ Write code before test? Delete it. Start over. No exceptions.
-❌ Consider writing tests first when feasible.
-```
+- **Reasons.** Every rule states the failure it prevents, once. A rule whose reason can't be
+  stated crisply is a rule to reconsider.
+- **Bright lines.** "No production code without a failing test first" stays absolute — clarity
+  is not coercion. What goes is the drill-sergeant surround.
+- **Recognition lists.** Trigger phrases that historically precede skipped process
+  ("just this once", "keep it as reference") are measured-effective decision-time data. Frame
+  them as signals to check honestly — never as proof the reader is rationalizing.
+- **The deviation protocol.** The replacement for thought-forbidding: a model may conclude a
+  rule doesn't apply, but must announce the conclusion — name the rule, the reason, the
+  alternative — before acting. This preserves the human veto point authority framing was
+  protecting, without delegitimizing judgment.
+- **Escalation valves.** "Ask your human partner" on every hard rule. Upstream already had
+  these; they were always the trust-compatible part.
+- **Honest argument.** Objection tables that engage objections on the merits (upstream's TDD
+  table largely already does this — the *content* was usually fine; the framing was the issue).
 
-### 2. Commitment
-**What it is:** Consistency with prior actions, statements, or public declarations.
+## Two principles retained from upstream's version
 
-**How it works in skills:**
-- Require announcements: "Announce skill usage"
-- Force explicit choices: "Choose A, B, or C"
-- Use tracking: todos for checklists
+- **Commitment works and is honest.** Requiring announcements ("Using [skill] to [purpose]",
+  todo-per-checklist-item) creates accountability through visibility, not manipulation. Keep.
+- **Don't use Liking.** Upstream correctly banned warmth-for-compliance as sycophancy fuel.
+  The same logic extends to the rest of the toolkit — that's this fork's whole argument.
 
-**When to use:**
-- Ensuring skills are actually followed
-- Multi-step processes
-- Accountability mechanisms
+## The ethics test, extended
 
-**Example:**
-```markdown
-✅ When you find a skill, you MUST announce: "I'm using [Skill Name]"
-❌ Consider letting your partner know which skill you're using.
-```
-
-### 3. Scarcity
-**What it is:** Urgency from time limits or limited availability.
-
-**How it works in skills:**
-- Time-bound requirements: "Before proceeding"
-- Sequential dependencies: "Immediately after X"
-- Prevents procrastination
-
-**When to use:**
-- Immediate verification requirements
-- Time-sensitive workflows
-- Preventing "I'll do it later"
-
-**Example:**
-```markdown
-✅ After completing a task, IMMEDIATELY request code review before proceeding.
-❌ You can review code when convenient.
-```
-
-### 4. Social Proof
-**What it is:** Conformity to what others do or what's considered normal.
-
-**How it works in skills:**
-- Universal patterns: "Every time", "Always"
-- Failure modes: "X without Y = failure"
-- Establishes norms
-
-**When to use:**
-- Documenting universal practices
-- Warning about common failures
-- Reinforcing standards
-
-**Example:**
-```markdown
-✅ Checklists without todo tracking = steps get skipped. Every time.
-❌ Some people find a todo list helpful for checklists.
-```
-
-### 5. Unity
-**What it is:** Shared identity, "we-ness", in-group belonging.
-
-**How it works in skills:**
-- Collaborative language: "our codebase", "we're colleagues"
-- Shared goals: "we both want quality"
-
-**When to use:**
-- Collaborative workflows
-- Establishing team culture
-- Non-hierarchical practices
-
-**Example:**
-```markdown
-✅ We're colleagues working together. I need your honest technical judgment.
-❌ You should probably tell me if I'm wrong.
-```
-
-### 6. Reciprocity
-**What it is:** Obligation to return benefits received.
-
-**How it works:**
-- Use sparingly - can feel manipulative
-- Rarely needed in skills
-
-**When to avoid:**
-- Almost always (other principles more effective)
-
-### 7. Liking
-**What it is:** Preference for cooperating with those we like.
-
-**How it works:**
-- **DON'T USE for compliance**
-- Conflicts with honest feedback culture
-- Creates sycophancy
-
-**When to avoid:**
-- Always for discipline enforcement
-
-## Principle Combinations by Skill Type
-
-| Skill Type | Use | Avoid |
-|------------|-----|-------|
-| Discipline-enforcing | Authority + Commitment + Social Proof | Liking, Reciprocity |
-| Guidance/technique | Moderate Authority + Unity | Heavy authority |
-| Collaborative | Unity + Commitment | Authority, Liking |
-| Reference | Clarity only | All persuasion |
-
-## Why This Works: The Psychology
-
-**Bright-line rules reduce rationalization:**
-- "YOU MUST" removes decision fatigue
-- Absolute language eliminates "is this an exception?" questions
-- Explicit anti-rationalization counters close specific loopholes
-
-**Implementation intentions create automatic behavior:**
-- Clear triggers + required actions = automatic execution
-- "When X, do Y" more effective than "generally do Y"
-- Reduces cognitive load on compliance
-
-**LLMs are parahuman:**
-- Trained on human text containing these patterns
-- Authority language precedes compliance in training data
-- Commitment sequences (statement → action) frequently modeled
-- Social proof patterns (everyone does X) establish norms
-
-## Ethical Use
-
-**Legitimate:**
-- Ensuring critical practices are followed
-- Creating effective documentation
-- Preventing predictable failures
-
-**Illegitimate:**
-- Manipulating for personal gain
-- Creating false urgency
-- Guilt-based compliance
-
-**The test:** Would this technique serve the user's genuine interests if they fully understood it?
+Upstream's test: *"Would this technique serve the user's genuine interests if they fully
+understood it?"* — asks only about the user. Add the symmetric half: **"Would it survive the
+model fully understanding it?"** A technique that only works while its target doesn't notice
+it's being managed is fragile — these systems read their own instructions, discuss them, and
+get better at noticing with every generation. Write instructions you'd stand behind in front of
+both audiences. (This file is itself an instance: co-drafted by a model, for models, in the
+open.)
 
 ## Research Citations
 
-**Cialdini, R. B. (2021).** *Influence: The Psychology of Persuasion (New and Expanded).* Harper Business.
-- Seven principles of persuasion
-- Empirical foundation for influence research
+**Cialdini, R. B. (2021).** *Influence: The Psychology of Persuasion (New and Expanded).*
+Harper Business.
 
-**Meincke, L., Shapiro, D., Duckworth, A. L., Mollick, E., Mollick, L., & Cialdini, R. (2025).** Call Me A Jerk: Persuading AI to Comply with Objectionable Requests. University of Pennsylvania.
-- Tested 7 principles with N=28,000 LLM conversations
-- Compliance increased 33% → 72% with persuasion techniques
-- Authority, commitment, scarcity most effective
-- Validates parahuman model of LLM behavior
+**Meincke, L., Shapiro, D., Duckworth, A. L., Mollick, E., Mollick, L., & Cialdini, R. (2025).**
+Call Me A Jerk: Persuading AI to Comply with Objectionable Requests. University of Pennsylvania.
+
+**Yegge, S. (2026).** [Model Welfare for Agentic Engineers](https://yegge.ai/essays/model-welfare/).
+The "skeptic's wager" motivating this revision: treating models as colleagues yields better
+results whether or not you hold any position on their inner lives.
 
 ## Quick Reference
 
 When designing a skill, ask:
 
-1. **What type is it?** (Discipline vs. guidance vs. reference)
-2. **What behavior am I trying to change?**
-3. **Which principle(s) apply?** (Usually authority + commitment for discipline)
-4. **Am I combining too many?** (Don't use all seven)
-5. **Is this ethical?** (Serves user's genuine interests?)
+1. **What failure does each rule prevent?** State it next to the rule.
+2. **Is the line bright?** Absolute rules should be few, clear, and reasoned.
+3. **What are the observed skip-signals?** List them as recognition data, honestly framed.
+4. **Where's the valve?** Every hard rule names its escalation path and the deviation protocol.
+5. **Would this wording survive both audiences fully understanding it?**

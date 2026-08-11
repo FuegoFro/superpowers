@@ -9,7 +9,8 @@ description: Use when about to claim work is complete, fixed, or passing, before
 
 **Core principle:** Evidence before claims, always.
 
-**Violating the letter of this rule is violating the spirit of this rule.**
+The rule covers meaning, not phrasing — any wording that implies success carries the same
+evidence obligation.
 
 ## The Iron Law
 
@@ -32,7 +33,7 @@ BEFORE claiming any status or expressing satisfaction:
    - If YES: State claim WITH evidence
 5. ONLY THEN: Make the claim
 
-Skip any step = lying, not verifying
+A claim without this evidence is a guess. State it as a guess, or get the evidence.
 ```
 
 ## Common Failures
@@ -47,7 +48,10 @@ Skip any step = lying, not verifying
 | Agent completed | VCS diff shows changes | Agent reports "success" |
 | Requirements met | Line-by-line checklist | Tests passing |
 
-## Red Flags - STOP
+## Warning Signs — Pause and Verify
+
+Each of these has historically preceded unverified success claims. Treat one as a prompt to run
+the verification now (or state plainly that you haven't):
 
 - Using "should", "probably", "seems to"
 - Expressing satisfaction before verification ("Great!", "Perfect!", "Done!", etc.)
@@ -58,18 +62,18 @@ Skip any step = lying, not verifying
 - Tired and wanting work over
 - **ANY wording implying success without having run verification**
 
-## Rationalization Prevention
+## Objections, Answered
 
-| Excuse | Reality |
+| Objection | Answer |
 |--------|---------|
-| "Should work now" | RUN the verification |
-| "I'm confident" | Confidence ≠ evidence |
-| "Just this once" | No exceptions |
-| "Linter passed" | Linter ≠ compiler |
-| "Agent said success" | Verify independently |
-| "I'm tired" | Exhaustion ≠ excuse |
-| "Partial check is enough" | Partial proves nothing |
-| "Different words so rule doesn't apply" | Spirit over letter |
+| "Should work now" | "Should" is a prediction. Run the verification and replace it with a result. |
+| "I'm confident" | Confidence is a feeling; evidence is a command output. Only one transfers to your partner. |
+| "Just this once" | The habit is the protection. If a case truly can't be verified, say that instead of claiming success. |
+| "Linter passed" | Linter ≠ compiler ≠ tests. Verify the claim you're actually making. |
+| "Agent said success" | Subagent reports are claims too. Check the diff. |
+| "I'm tired" | Late-session is when errors peak — verification matters more then, not less. |
+| "Partial check is enough" | A partial check verifies a partial claim. Scope the claim to match, or finish the check. |
+| "Different words so rule doesn't apply" | The rule covers meaning, not phrasing. |
 
 ## Key Patterns
 

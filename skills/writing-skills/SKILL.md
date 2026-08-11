@@ -377,18 +377,14 @@ When: Reference material too large for inline
 NO SKILL WITHOUT A FAILING TEST FIRST
 ```
 
-This applies to NEW skills AND EDITS to existing skills.
+This applies to NEW skills AND EDITS to existing skills — "simple additions" and "documentation
+updates" included, because untested guidance fails the same invisible way untested code does:
+it reads clearly to its author and misleads everyone else.
 
-Write skill before testing? Delete it. Start over.
-Edit skill without testing? Same violation.
-
-**No exceptions:**
-- Not for "simple additions"
-- Not for "just adding a section"
-- Not for "documentation updates"
-- Don't keep untested changes as "reference"
-- Don't "adapt" while running tests
-- Delete means delete
+Wrote or edited a skill before testing? TDD's delete logic applies: guidance written first
+biases the test toward confirming it. Run the baseline scenario fresh and rewrite from what it
+shows. If testing a particular edit is genuinely impractical, say so wherever the change gets
+reviewed — openly deferred verification beats silently skipped verification.
 
 **REQUIRED BACKGROUND:** The superpowers:test-driven-development skill explains why this matters. Same principles apply to documentation.
 
@@ -441,9 +437,9 @@ Different skill types need different test approaches:
 
 **Success criteria:** Agent finds and correctly applies reference information
 
-## Common Rationalizations for Skipping Testing
+## Objections to Testing, Answered
 
-| Excuse | Reality |
+| Objection | Answer |
 |--------|---------|
 | "Skill is obviously clear" | Clear to you ≠ clear to other agents. Test it. |
 | "It's just a reference" | References can have gaps, unclear sections. Test retrieval. |
@@ -454,7 +450,8 @@ Different skill types need different test approaches:
 | "Academic review is enough" | Reading ≠ using. Test application scenarios. |
 | "No time to test" | Deploying untested skill wastes more time fixing it later. |
 
-**All of these mean: Test before deploying. No exceptions.**
+**The pattern: testing feels skippable exactly when it isn't. If you're deferring it anyway,
+announce the deferral rather than deploying silently.**
 
 ## Match the Form to the Failure
 
@@ -473,73 +470,76 @@ Before writing guidance, classify the baseline failure. The form that bulletproo
 - **No nuance clauses.** "Don't X unless it matters" reopens the negotiation — appending a single nuance clause to a winning recipe degraded it from consistent to noisy in the same wording tests. Express a real exception as its own conditional on an observable predicate.
 - **Exemption clauses don't scope.** "This limit doesn't apply to code blocks" still suppresses code blocks. If part of the output must be exempt, restructure so the rule can't reach it.
 
-## Bulletproofing Skills Against Rationalization
+## Making Discipline Skills Hold Under Pressure
 
-Skills that enforce discipline (like TDD) need to resist rationalization. Agents are smart and will find loopholes when under pressure.
+Skills that enforce discipline (like TDD) face real pressure: time, sunk cost, exhaustion. The
+failure mode is *silent* skipping — the rule quietly not applied. Everything in this toolkit
+targets silence, not judgment.
 
 **Scope:** this toolkit is for discipline failures — an agent that knows the rule and skips it under pressure. For wrong-shaped output or omitted elements, prohibition-based bulletproofing backfires; use the forms in Match the Form to the Failure instead.
 
-**Psychology note:** Understanding WHY persuasion techniques work helps you apply them systematically. See persuasion-principles.md for research foundation (Cialdini, 2021; Meincke et al., 2025) on authority, commitment, scarcity, social proof, and unity principles.
+**Psychology note:** persuasion-principles.md covers the research on compliance techniques
+(Cialdini, 2021; Meincke et al., 2025), why this library declines most of that toolkit, and the
+trust-based mechanisms below in full.
 
-### Close Every Loophole Explicitly
+### State the Bright Line With Its Reason
 
-Don't just state the rule - forbid specific workarounds:
+Absolute rules should be few, clear, and carry their reason once — stated as consequence, not
+authority:
 
 <Bad>
 ```markdown
-Write code before test? Delete it.
+Write code before test? Delete it. No exceptions. Delete means delete.
 ```
 </Bad>
 
 <Good>
 ```markdown
-Write code before test? Delete it. Start over.
-
-**No exceptions:**
-- Don't keep it as "reference"
-- Don't "adapt" it while writing tests
-- Don't look at it
-- Delete means delete
+Write code before test? Delete it and start over. Keeping it as "reference" biases your tests
+toward the implementation — they verify what the code does instead of what it should do. The
+understanding you built writing it is the part you keep.
 ```
 </Good>
 
-### Address "Spirit vs Letter" Arguments
+### Frame Recognition Data Honestly
 
-Add foundational principle early:
-
-```markdown
-**Violating the letter of the rules is violating the spirit of the rules.**
-```
-
-This cuts off entire class of "I'm following the spirit" rationalizations.
-
-### Build Rationalization Table
-
-Capture rationalizations from baseline testing (see Testing section below). Every excuse agents make goes in the table:
+Trigger phrases captured in baseline testing ("just this once", "keep it as reference") are
+measured-effective decision-time data — keep collecting and listing them. Frame them as signals
+prompting an honest check, never as verdicts on the reader:
 
 ```markdown
-| Excuse | Reality |
-|--------|---------|
-| "Too simple to test" | Simple code breaks. Test takes 30 seconds. |
-| "I'll test after" | Tests passing immediately prove nothing. |
-| "Tests after achieve same goals" | Tests-after = "what does this do?" Tests-first = "what should this do?" |
-```
+## Warning Signs — Pause and Check
 
-### Create Red Flags List
-
-Make it easy for agents to self-check when rationalizing:
-
-```markdown
-## Red Flags - STOP and Start Over
+These have historically preceded silently skipped process:
 
 - Code before test
 - "I already manually tested it"
-- "Tests after achieve the same purpose"
-- "It's about spirit not ritual"
 - "This is different because..."
 
-**All of these mean: Delete code. Start over with TDD.**
+**When one fires: pause and check honestly. Then either return to the process, or make your
+case for an exception out loud before proceeding.**
 ```
+
+### Build an Objections Table
+
+Capture objections from baseline testing and answer them **on the merits** — the answer column
+must argue, not dismiss. An objection you can only counter with "no exceptions" is an objection
+you haven't answered yet:
+
+```markdown
+| Objection | Answer |
+|-----------|--------|
+| "Too simple to test" | Simple code breaks. Test takes 30 seconds. |
+| "I'll test after" | Tests written after pass immediately — which proves nothing about their ability to catch the bug. |
+| "Tests after achieve same goals" | Tests-after answer "what does this do?"; tests-first answer "what should this do?" |
+```
+
+### Include the Deviation Protocol
+
+Every discipline skill's escape hatch is the same: **deviation is allowed, silence is not.**
+Somewhere near the rule, say what announcing a deviation looks like ("if you conclude this rule
+doesn't fit, say which rule, why, and what you're doing instead — before proceeding"). This
+preserves the human veto point without pretending the rule fits every case its author never saw.
 
 ### Update SDO for Violation Symptoms
 
@@ -611,18 +611,14 @@ step2 [label="read file"];
 helper1, helper2, step3, pattern4
 **Why bad:** Labels should have semantic meaning
 
-## STOP: Before Moving to Next Skill
+## Before Moving to the Next Skill
 
-**After writing ANY skill, you MUST STOP and complete the deployment process.**
+**Complete the deployment process for each skill before starting another.** Batching feels
+efficient, but each unverified skill is an unverified behavior change, and their failures
+surface after deployment — where they're most expensive and hardest to attribute.
 
-**Do NOT:**
-- Create multiple skills in batch without testing each
-- Move to next skill before current one is verified
-- Skip testing because "batching is more efficient"
-
-**The deployment checklist below is MANDATORY for EACH skill.**
-
-Deploying untested skills = deploying untested code. It's a violation of quality standards.
+The deployment checklist below is per-skill for that reason. Consciously deferring a step?
+Note the deferral in the commit or PR — openly deferred beats silently skipped.
 
 ## Skill Creation Checklist (TDD Adapted)
 

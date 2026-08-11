@@ -145,7 +145,7 @@ When feedback IS correct:
 
 **Why no thanks:** Actions speak. Just fix it. The code itself shows you heard the feedback.
 
-**If you catch yourself about to write "Thanks":** DELETE IT. State the fix instead.
+**About to write "Thanks"?** State the fix instead — the code itself shows you heard the feedback.
 
 ## Gracefully Correcting Your Pushback
 

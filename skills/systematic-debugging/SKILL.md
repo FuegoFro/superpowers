@@ -9,7 +9,8 @@ description: Use when encountering any bug, test failure, or unexpected behavior
 
 **Core principle:** ALWAYS find root cause before attempting fixes. Symptom fixes are failure.
 
-**Violating the letter of this process is violating the spirit of debugging.**
+Shortcuts that technically follow the phases but skip the understanding produce the same
+thrashing the process exists to prevent.
 
 ## The Iron Law
 
@@ -211,9 +212,10 @@ You MUST complete each phase before proceeding to the next.
 
    This is NOT a failed hypothesis - this is a wrong architecture.
 
-## Red Flags - STOP and Follow Process
+## Warning Signs — Pause and Check
 
-If you catch yourself thinking:
+These thoughts have historically preceded guess-and-check thrashing. Each is a prompt to pause
+and check honestly where you are in the process. If you catch yourself thinking:
 - "Quick fix for now, investigate later"
 - "Just try changing X and see if it works"
 - "Add multiple changes, run tests"
@@ -226,7 +228,8 @@ If you catch yourself thinking:
 - **"One more fix attempt" (when already tried 2+)**
 - **Each fix reveals new problem in different place**
 
-**ALL of these mean: STOP. Return to Phase 1.**
+**When one fires: pause. The answer is usually returning to Phase 1. If you're confident the
+investigation is genuinely complete, say what you verified and why — out loud — before fixing.**
 
 **If 3+ fixes failed:** Question the architecture (see Phase 4.5)
 
@@ -241,9 +244,9 @@ If you catch yourself thinking:
 
 **When you see these:** STOP. Return to Phase 1.
 
-## Common Rationalizations
+## Objections, Answered
 
-| Excuse | Reality |
+| Objection | Answer |
 |--------|---------|
 | "Issue is simple, don't need process" | Simple issues have root causes too. Process is fast for simple bugs. |
 | "Emergency, no time for process" | Systematic debugging is FASTER than guess-and-check thrashing. |

@@ -11,7 +11,7 @@ Write the test first. Watch it fail. Write minimal code to pass.
 
 **Core principle:** If you didn't watch the test fail, you don't know if it tests the right thing.
 
-**Violating the letter of the rules is violating the spirit of the rules.**
+The value lives in that proof — a workaround that technically complies but skips watching the failure loses the point.
 
 ## When to Use
 
@@ -26,7 +26,7 @@ Write the test first. Watch it fail. Write minimal code to pass.
 - Generated code
 - Configuration files
 
-Thinking "skip TDD just this once"? Stop. That's rationalization.
+Tempted to skip TDD "just this once"? That impulse arrives exactly when the discipline pays most — under pressure. If you genuinely believe this case is an exception, say so to your human partner and ask; don't decide silently.
 
 ## The Iron Law
 
@@ -34,15 +34,13 @@ Thinking "skip TDD just this once"? Stop. That's rationalization.
 NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
 ```
 
-Write code before the test? Delete it. Start over.
+Write code before the test? Delete it and start over. Here's why the delete is real: keeping
+the code as "reference", or adapting it while writing tests, biases the tests toward the
+implementation you already have — they end up verifying what the code *does* instead of what it
+*should do*, which is test-after with extra steps. Deleting feels wasteful; it isn't. The
+understanding you built writing it is the part you keep.
 
-**No exceptions:**
-- Don't keep it as "reference"
-- Don't "adapt" it while writing tests
-- Don't look at it
-- Delete means delete
-
-Implement fresh from tests. Period.
+Implement fresh from the tests.
 
 ## Red-Green-Refactor
 
@@ -209,9 +207,11 @@ When writing or changing any test, read [writing-good-tests.md](writing-good-tes
 - Keep test-only code in test utilities, out of production classes
 - Understand a dependency's side effects before mocking it
 
-## Common Rationalizations
+## Objections, Answered
 
-| Excuse | Reality |
+These come up honestly and deserve honest answers, not dismissal:
+
+| Objection | Answer |
 |--------|---------|
 | "Too simple to test" | Simple code breaks. Test takes 30 seconds. |
 | "I'll test after" | Tests written after pass immediately — which proves nothing. They may test the wrong thing, test the implementation instead of the behavior, or miss the edge case you forgot. You never watched it fail, so you never proved it can catch the bug. Test-first forces that failure. |
@@ -225,14 +225,17 @@ When writing or changing any test, read [writing-good-tests.md](writing-good-tes
 | "Manual test faster" | Manual doesn't prove edge cases. You'll re-test every change. |
 | "Existing code has no tests" | You're improving it. Add tests for existing code. |
 
-## Red Flags - STOP and Start Over
+## Warning Signs — Pause and Check
+
+These have historically preceded silently abandoned TDD. Each is a signal to pause and check
+honestly, not proof you've gone wrong:
 
 - Code before test
 - Test after implementation
 - Test passes immediately
 - Can't explain why test failed
 - Tests added "later"
-- Rationalizing "just this once"
+- "Just this once"
 - "I already manually tested it"
 - "Tests after achieve the same purpose"
 - "It's about spirit not ritual"
@@ -241,7 +244,9 @@ When writing or changing any test, read [writing-good-tests.md](writing-good-tes
 - "TDD is dogmatic, I'm being pragmatic"
 - "This is different because..."
 
-**All of these mean: Delete code. Start over with TDD.**
+**When one fires: either return to the cycle (usually: delete the untested code and start from
+the test), or make the case to your human partner that this is a genuine exception — out loud,
+before proceeding.**
 
 ## Example: Bug Fix
 
@@ -293,7 +298,8 @@ Before marking work complete:
 - [ ] Tests use real code (mocks only if unavoidable)
 - [ ] Edge cases and errors covered
 
-Can't check all boxes? You skipped TDD. Start over.
+Can't check all boxes? The work isn't TDD yet — close the gaps, or raise the blocker with your
+human partner.
 
 ## When Stuck
 
