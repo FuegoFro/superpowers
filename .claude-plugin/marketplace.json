@@ -1,6 +1,6 @@
 {
-  "name": "superpowers-dev",
-  "description": "Development marketplace for Superpowers core skills library",
+  "name": "fuegofro-superpowers",
+  "description": "FuegoFro's trust-based fork of the Superpowers core skills library (see FORK.md)",
   "owner": {
     "name": "Jesse Vincent",
     "email": "jesse@fsck.com"

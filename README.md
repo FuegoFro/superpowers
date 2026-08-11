@@ -1,4 +1,11 @@
-# Superpowers
+# Superpowers (trust-based fork)
+
+> **This is [FuegoFro's fork](https://github.com/FuegoFro/superpowers) of
+> [obra/superpowers](https://github.com/obra/superpowers).** It preserves the full methodology —
+> every checklist, gate, and test — and rewrites the instruction *style* from coercion-based
+> ("YOU DO NOT HAVE A CHOICE") to trust-based (rules with reasons, plus an announced-deviation
+> protocol). See [FORK.md](FORK.md) for the rationale, the style contract, and the maintenance
+> protocol for tracking upstream.
 
 Superpowers is a complete software development methodology for your coding agents, built on top of a set of composable skills and some initial instructions that make sure your agent uses them.
 
