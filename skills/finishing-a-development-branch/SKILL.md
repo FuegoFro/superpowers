@@ -133,10 +133,11 @@ git push -u origin <feature-branch>
 ```
 
 Then create the pull/merge request against <base-branch> with the forge's
-tooling — and stop there; merging it is your human partner's call, after CI
-and review — its CLI if one is available, or the creation URL most forges
+tooling — its CLI if one is available, or the creation URL most forges
 print when you push — following the repo's PR template and conventions if
-present, and report the URL to your human partner.
+present, and report the URL and its CI status to your human partner.
+
+Stop there. Merging the PR is your human partner's call, after CI and review.
 
 Keep the worktree — your human partner iterates on PR feedback there.
 
