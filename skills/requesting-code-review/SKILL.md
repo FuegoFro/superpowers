@@ -21,6 +21,25 @@ Dispatch a code reviewer subagent to catch issues before they cascade. The revie
 - Before refactoring (baseline check)
 - After fixing complex bug
 
+## Step 0: Prefer the Host's Review Machinery
+
+Before dispatching a reviewer of your own, check what review your harness and your repo
+already ship. Claude Code provides `/code-review` (correctness plus reuse and simplification,
+at a chosen effort level), `/security-review` (a security pass over the branch's changes), and
+`/simplify` (quality-only cleanup, applied). Where the repo ships its own review commands —
+a de-slop pass, a house-style check, an ownership-aware reviewer — those count too.
+
+Prefer them, in this order: `/code-review` on every change; `/security-review` when the diff
+touches authentication, authorization, input handling, secrets, or anything network-facing;
+`/simplify` and the repo's own passes for quality. They are tuned to this codebase and its
+conventions, their findings arrive in the shape the rest of the repo's tooling expects, and
+they cost you one command instead of a dispatch you have to compose.
+
+They do not cover everything. Spec compliance against a plan, and judgment about whether the
+change was the right change at all, still want the reviewer below — run the host commands
+first, act on what they find, and dispatch the subagent reviewer for the rest.
+If none of these are available, the subagent reviewer is the whole review.
+
 ## How to Request
 
 **1. Get git SHAs:**
@@ -76,6 +95,7 @@ You: [Fix progress indicators]
 
 | Excuse | Reality |
 |--------|---------|
+| "A host review command ran, so the subagent review is redundant" | They answer different questions. `/code-review` reads the diff for defects; the subagent reviewer reads it against the plan the change was supposed to implement. A clean `/code-review` on code that built the wrong thing is still a clean review. |
 | "I'll just review the diff myself instead of dispatching a reviewer" | You're the coordinator — reviewing the diff inline burns the context window you need to keep driving the work. Dispatch a reviewer subagent: the diff and the evaluation live in its context, and only the findings come back to you. |
 | "The reviewer needs my whole session history to understand the change" | Hand it precisely crafted context, never your session's history. That keeps the reviewer on the work product, not your thought process. |
 

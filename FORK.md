@@ -116,6 +116,43 @@ possible so upstream merges stay tractable. If a section is already measured-neu
 touch it — including upstream's descriptive use of "rationalization" as a *testing* term
 (documenting what baseline agents say under pressure), which is methodology, not framing.
 
+## The host-integration delta
+
+The style contract above governs *stance*. A second, smaller delta governs *deference*: where
+upstream prescribes its own mechanism, this fork defers to the mechanism the harness or the
+repo already provides. Upstream writes for a generic single-project checkout; a real session
+usually runs inside a harness with worktree tooling and review commands of its own, and a repo
+with its own test runner and commit conventions. When the skill's instructions and the host's
+tooling disagree, the session either fights the host or quietly ignores the skill.
+
+The rule is: **name the capability, not the implementation.** Prefer the harness's own tool,
+then the repo's own convention, then upstream's generic fallback — and keep the fallback,
+because not every repo ships anything. Concretely:
+
+- **Worktrees** — the harness owns creation *and placement* (Claude Code uses
+  `.claude/worktrees/`); some harnesses require isolation before the first edit, which makes
+  the consent question moot. Manual `git worktree add` stays as the fallback.
+- **Review** — the harness's review commands (`/code-review`, `/security-review`, `/simplify`)
+  and any the repo ships run first; the subagent reviewer covers what they cannot see, which is
+  compliance with the plan. Neither replaces the other.
+- **Tests** — scope baselines to what the change touches, and treat "this area has no reachable
+  test path" as a question for the human, asked before the code is written.
+- **Commits and integration** — the repo's commit conventions and integration norms decide
+  message format and who merges. Opening a PR is the agent's job; merging it is not.
+
+Deliberately *not* here: any repo's specific commands, prefixes, or paths. Those go stale, and
+duplicating them in a plugin that installs user-wide gives wrong instructions in every other
+repo. Point at the repo's own AGENTS.md/CLAUDE.md and skills instead.
+
+Contract violations to watch for on sync: a skill that hardcodes `npm test`/`cargo build` as
+*the* command rather than a fallback, prescribes a worktree path when a native tool exists, or
+tells the agent to merge its own work.
+
+`tests/claude-code/test-host-integration-policy.sh` pins this delta the way
+`test-worktree-path-policy.sh` pins the worktree paths — grep assertions over the skill text,
+no LLM needed, so a sync that flattens one of these lands as a red test rather than a silent
+regression.
+
 ## Known risk and success metric
 
 The pressure-tested coercive phrasings may hold discipline better than trust phrasings under
@@ -142,7 +179,10 @@ the rest — the two styles coexist fine.
 4. Sweep new/changed upstream files for contract violations (markers: `EXTREMELY`,
    `not negotiable`, `no choice`, `rationaliz` outside testing contexts, `lying`,
    `Delete means delete`, all-caps imperatives) and apply rules 1–5 with rule-6 restraint.
-5. Push the branch and open a PR to `main` listing: upstream commits merged, conflicts and how
+5. Re-run `tests/claude-code/test-host-integration-policy.sh` and
+   `test-worktree-path-policy.sh`. A red assertion means the merge flattened a fork delta back
+   to upstream's text — re-apply the host-integration rule rather than editing the test.
+6. Push the branch and open a PR to `main` listing: upstream commits merged, conflicts and how
    resolved, and any new text the contract was applied to. Never push to `main` directly.
 
 ## Provenance

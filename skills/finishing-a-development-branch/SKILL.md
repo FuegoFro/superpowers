@@ -50,6 +50,20 @@ plan, the conversation, or the branch's upstream. If it is not already
 known, ask: "This branch split from <your best guess> - is that correct?"
 Confirm before merging: merging into the wrong base is expensive to undo.
 
+## Step 3.5: Read the Repo's Integration Norms
+
+Before presenting the menu, find the repo's own commit and integration conventions —
+AGENTS.md/CLAUDE.md, a commit or git skill the repo ships, the PR template. They decide message
+format, whether local merges to the base branch are normal here at all, and who merges. A
+monorepo where everything lands through review makes Option 1 the wrong default even though it
+is listed first.
+
+Two rules hold regardless of what you find:
+
+- **Never merge a pull request yourself.** Opening it is your job; merging it is your human
+  partner's, after CI and review. Report the URL and the CI status instead.
+- Never delete a branch, rebase, or force-push without your human partner asking for it.
+
 ## Step 4: Present Options
 
 **Normal repo and named-branch worktree — present exactly these 3 options:**
@@ -119,7 +133,8 @@ git push -u origin <feature-branch>
 ```
 
 Then create the pull/merge request against <base-branch> with the forge's
-tooling — its CLI if one is available, or the creation URL most forges
+tooling — and stop there; merging it is your human partner's call, after CI
+and review — its CLI if one is available, or the creation URL most forges
 print when you push — following the repo's PR template and conventions if
 present, and report the URL to your human partner.
 
@@ -214,6 +229,7 @@ place. If your platform provides a workspace-exit tool, use it.
 | Excuse | Reality |
 |--------|---------|
 | "Tests passed earlier this session" | Run the suite on the tree you are about to integrate. A green run only proves the tree it ran on. |
+| "The PR is green and approved — merging it is just finishing the job" | Opening the PR is where your part ends. Report the URL and CI status; the merge is your human partner's, and many repos require it to be. |
 | "They obviously want it merged" | Integration is your human partner's decision. Present the menu and wait. |
 | "They seem done with this feature — I'll offer to discard it" | The menu is complete as written. Discard happens only when your human partner asks for it in so many words. |
 | "'Yeah, get rid of it' counts as confirmation" | Only the typed word `discard` authorizes deletion. |

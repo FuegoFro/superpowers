@@ -444,6 +444,18 @@ parked-with-ruling at the cap.
 
 ## Final Review
 
+**Run the host's review machinery first.** Before the whole-branch reviewer, run the review
+commands your harness and repo already ship over the branch's changes — in Claude Code,
+`/code-review` on every branch, `/security-review` when the diff touches authentication,
+authorization, input handling, secrets, or anything network-facing, and `/simplify` plus any
+repo-specific pass (a de-slop or house-style check) for quality. They are tuned to this
+codebase, and their findings arrive already triaged. Fold what they report into the findings
+list below rather than running a separate fix wave for each.
+
+They do not replace the whole-branch reviewer: those commands read the diff for defects, while
+the reviewer reads it against the plan it was supposed to implement. Run both. See
+superpowers:requesting-code-review for the full ordering.
+
 The final whole-branch review gets a package too: run
 `scripts/review-package PLAN_FILE MERGE_BASE HEAD` (MERGE_BASE = the commit the
 branch started from, e.g. `git merge-base main HEAD`) and include the
@@ -496,6 +508,7 @@ Use superpowers:finishing-a-development-branch.
 | "The reviewer will just find something new anyway" | Scoped re-reviews verify fixes; they cannot wander. New findings on untouched code go to the ledger, not the loop. |
 | "This finding is obviously wrong, I'll drop it" | You adjudicate only at the cap, and every ruling is a ledger entry. Silent discards are forbidden. |
 | "The fix was small, skip the re-review" | Unreviewed fixes are how regressions land. Every round ends with a scoped re-review. |
+| "`/code-review` came back clean, so the final review can be skipped" | It read the diff for defects, not against the plan. Code that is clean and builds the wrong thing passes it every time. Run both. |
 | "Reviews slow the loop down" | The loop without reviews is just unverified churn. Reviews are the loop's brakes and steering. |
 | "Ledger bookkeeping is overhead" | The ledger is what survives compaction. Controllers without one have re-dispatched entire completed task sequences. |
 | "The implementer spawned its own reviewer — free extra assurance" | It's a duplicate seat reviewing the same diff; the task review is the gate. A worker-spawned reviewer is a defect to flag, not rigor. |

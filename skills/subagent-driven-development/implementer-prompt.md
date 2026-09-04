@@ -35,7 +35,9 @@ Subagent (general-purpose):
     1. Implement exactly what the task specifies
     2. Write tests (following TDD if task says to)
     3. Verify implementation works
-    4. Commit your work
+    4. Commit your work, following the repo's own commit conventions —
+       check AGENTS.md/CLAUDE.md and any commit skill the repo ships before
+       composing the message, rather than inventing a format
     5. Self-review (see below)
     6. Report back
 

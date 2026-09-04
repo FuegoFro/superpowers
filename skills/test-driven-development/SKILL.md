@@ -25,6 +25,15 @@ The value lives in that proof — a workaround that technically complies but ski
 - Throwaway prototypes
 - Generated code
 - Configuration files
+- Code in an area with no reachable test path — no harness, no runner you can invoke, or a
+  suite whose setup is out of proportion to the change
+
+That last one is a judgment call, and it is the common one in a large existing codebase. Make
+it explicitly, not by drift: look for the test path first — a sibling test file, the repo's own
+test command, what AGENTS.md/CLAUDE.md says. If you find one, TDD applies as written, however
+awkward the suite. If you genuinely cannot find one, say what you looked for and what you found
+and ask before you write the code, not after — a "there were no tests here" reported at the end
+is an unverified change your partner had no chance to weigh in on.
 
 Tempted to skip TDD "just this once"? That impulse arrives exactly when the discipline pays most — under pressure. If you genuinely believe this case is an exception, say so to your human partner and ask; don't decide silently.
 
@@ -228,6 +237,7 @@ These come up honestly and deserve honest answers, not dismissal:
 | "TDD will slow me down" | TDD IS the pragmatic path: catches bugs before commit, prevents regressions, lets you refactor without fear. "Pragmatic" shortcuts mean debugging in production — slower, not faster. |
 | "Manual test faster" | Manual doesn't prove edge cases. You'll re-test every change. |
 | "Existing code has no tests" | You're improving it. Add tests for existing code. |
+| "This repo isn't set up for TDD" | Sometimes true, and it's a question, not a conclusion. Name what you looked for — sibling tests, the repo's test command, AGENTS.md — and what you found, then ask. Deciding it silently is the failure mode; asking is the exception working. |
 
 ## Warning Signs — Pause and Check
 
@@ -247,6 +257,7 @@ honestly, not proof you've gone wrong:
 - "Already spent X hours, deleting is wasteful"
 - "TDD is dogmatic, I'm being pragmatic"
 - "This is different because..."
+- "There's no test harness for this area" (before you have looked for one)
 
 **When one fires: either return to the cycle (usually: delete the untested code and start from
 the test), or make the case to your human partner that this is a genuine exception — out loud,
