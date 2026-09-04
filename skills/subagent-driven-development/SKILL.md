@@ -445,16 +445,14 @@ parked-with-ruling at the cap.
 ## Final Review
 
 **Run the host's review machinery first.** Before the whole-branch reviewer, run the review
-commands your harness and repo already ship over the branch's changes — in Claude Code,
-`/code-review` on every branch, `/security-review` when the diff touches authentication,
-authorization, input handling, secrets, or anything network-facing, and `/simplify` plus any
-repo-specific pass (a de-slop or house-style check) for quality. They are tuned to this
-codebase, and their findings arrive already triaged. Fold what they report into the findings
-list below rather than running a separate fix wave for each.
+commands your harness and repo already ship over the branch's changes — in Claude Code
+`/code-review`, `/security-review` when the diff touches auth, input handling, or secrets, and
+`/simplify` plus any repo-specific pass. superpowers:requesting-code-review has the ordering
+and the reasoning. Fold what they report into the findings list below rather than running a
+separate fix wave for each.
 
 They do not replace the whole-branch reviewer: those commands read the diff for defects, while
-the reviewer reads it against the plan it was supposed to implement. Run both. See
-superpowers:requesting-code-review for the full ordering.
+the reviewer reads it against the plan it was supposed to implement. Run both.
 
 The final whole-branch review gets a package too: run
 `scripts/review-package PLAN_FILE MERGE_BASE HEAD` (MERGE_BASE = the commit the
