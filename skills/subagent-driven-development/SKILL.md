@@ -289,6 +289,13 @@ parked-with-ruling at the cap.
 
 ## Final Review
 
+**Run the host's review machinery first:** in Claude Code `/code-review`,
+`/security-review` when the diff touches auth, input handling or secrets, and
+`/simplify` plus any repo-specific pass (order and reasons:
+superpowers:requesting-code-review Step 0). Fold what they report into the
+findings list below. They read the diff for defects; the reviewer below reads
+it against the plan. Run both.
+
 Run `bash scripts/dispatch final PLAN_FILE MERGE_BASE HEAD --note NOTE_FILE`
 (MERGE_BASE: where the branch started, e.g. `git merge-base main HEAD`; the
 note: what was built, and the spec path) and dispatch on the most capable
