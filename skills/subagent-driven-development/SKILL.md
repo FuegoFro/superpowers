@@ -451,6 +451,11 @@ commands your harness and repo already ship over the branch's changes — in Cla
 and the reasoning. Fold what they report into the findings list below rather than running a
 separate fix wave for each.
 
+Some of them apply their own edits — `/simplify` does, and de-slop passes usually do. Commit
+whatever they change *before* you take the review package: the package is built from the
+`MERGE_BASE..HEAD` commit range, so edits still sitting in the working tree are invisible to
+the reviewer and would reach the merge as the only unreviewed code on the branch.
+
 They do not replace the whole-branch reviewer: those commands read the diff for defects, while
 the reviewer reads it against the plan it was supposed to implement. Run both.
 

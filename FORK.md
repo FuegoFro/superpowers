@@ -180,7 +180,7 @@ the rest — the two styles coexist fine.
    `not negotiable`, `no choice`, `rationaliz` outside testing contexts, `lying`,
    `Delete means delete`, all-caps imperatives) and apply rules 1–5 with rule-6 restraint.
 5. Re-run `tests/claude-code/test-host-integration-policy.sh` and
-   `test-worktree-path-policy.sh`. A red assertion means the merge flattened a fork delta back
+   `tests/claude-code/test-worktree-path-policy.sh`. A red assertion means the merge flattened a fork delta back
    to upstream's text — re-apply the host-integration rule rather than editing the test.
 6. Push the branch and open a PR to `main` listing: upstream commits merged, conflicts and how
    resolved, and any new text the contract was applied to. Never push to `main` directly.

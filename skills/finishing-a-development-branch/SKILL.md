@@ -54,9 +54,10 @@ Confirm before merging: merging into the wrong base is expensive to undo.
 
 Before presenting the menu, find the repo's own commit and integration conventions —
 AGENTS.md/CLAUDE.md, a commit or git skill the repo ships, the PR template. They decide message
-format, whether local merges to the base branch are normal here at all, and who merges. A
-monorepo where everything lands through review makes Option 1 the wrong default even though it
-is listed first.
+format, whether local merges to the base branch are normal here at all, and who merges. In a
+monorepo where everything lands through review, merging locally is the wrong choice even though
+it heads the standard menu — name the option, not its number, since the two menus below number
+them differently.
 
 Two rules hold regardless of what you find:
 
