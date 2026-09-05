@@ -293,8 +293,10 @@ parked-with-ruling at the cap.
 `/security-review` when the diff touches auth, input handling or secrets, and
 `/simplify` plus any repo-specific pass (order and reasons:
 superpowers:requesting-code-review Step 0). Fold what they report into the
-findings list below. They read the diff for defects; the reviewer below reads
-it against the plan. Run both.
+findings list below, and commit any edits they make (`/simplify` makes some)
+before rendering the review: its package reads only `MERGE_BASE..HEAD`. They
+read the diff for defects; the reviewer below reads it against the plan. Run
+both.
 
 Run `bash scripts/dispatch final PLAN_FILE MERGE_BASE HEAD --note NOTE_FILE`
 (MERGE_BASE: where the branch started, e.g. `git merge-base main HEAD`; the

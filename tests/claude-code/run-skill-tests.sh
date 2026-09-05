@@ -77,6 +77,7 @@ tests=(
     "test-skill-body-size.sh"
     "test-plan-stats.sh"
     "test-worktree-path-policy.sh"
+    "test-host-integration-policy.sh"
     "test-sdd-workspace.sh"
     "test-sdd-slicing.sh"
     "test-executing-plans-scripts.sh"

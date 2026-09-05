@@ -25,8 +25,7 @@ The value lives in that proof — a workaround that technically complies but ski
 - Throwaway prototypes
 - Generated code
 - Configuration files
-- Code in an area with no reachable test path — no harness, no runner you can invoke, or a
-  suite whose setup is out of proportion to the change
+- Code in an area with no reachable test path — no harness, and no runner you can invoke
 
 That last one is a judgment call, and it is the common one in a large existing codebase. Make
 it explicitly, not by drift: look for the test path first — a sibling test file, the repo's own
