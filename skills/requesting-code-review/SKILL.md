@@ -29,7 +29,8 @@ at a chosen effort level), `/security-review` (a security pass over the branch's
 `/simplify` (quality-only cleanup, applied). Where the repo ships its own review commands —
 a de-slop pass, a house-style check, an ownership-aware reviewer — those count too.
 
-Prefer them, in this order: `/code-review` on every change; `/security-review` when the diff
+Prefer them, in this order: `/code-review` once per branch — not per task, where the reviewer
+below is the gate and N host runs would be N times the cost; `/security-review` when the diff
 touches authentication, authorization, input handling, secrets, or anything network-facing;
 `/simplify` and the repo's own passes for quality. They are tuned to this codebase and its
 conventions, their findings arrive in the shape the rest of the repo's tooling expects, and
@@ -39,6 +40,10 @@ They do not cover everything. Spec compliance against a plan, and judgment about
 change was the right change at all, still want the reviewer below — run the host commands
 first, act on what they find, and dispatch the subagent reviewer for the rest.
 If none of these are available, the subagent reviewer is the whole review.
+
+Anything they applied is code too. Commit their edits before capturing the SHAs below —
+otherwise the reviewer reads a range that predates them, and an applied cleanup becomes the one
+change on the branch nothing reviewed.
 
 ## How to Request
 

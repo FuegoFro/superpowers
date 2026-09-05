@@ -188,9 +188,10 @@ the rest — the two styles coexist fine.
    resolve its conflicts the same way — upstream's content, the branch's intent. If the rebase
    is too entangled, leave the branch untouched and push the attempt as
    `danny/discord-adaptations-rebase-YYYY-MM-DD` for a human.
-7. After the rebase, re-run `tests/claude-code/test-host-integration-policy.sh` and
-   `test-worktree-path-policy.sh`. A red assertion means the merge flattened a fork delta back
-   to upstream's text — re-apply the host-integration rule rather than editing the test.
+7. Before step 6's push, re-run `tests/claude-code/test-host-integration-policy.sh` and
+   `tests/claude-code/test-worktree-path-policy.sh` on the rebased branch. A red assertion means
+   the rebase flattened a fork delta back to upstream's text — re-apply the host-integration
+   rule rather than editing the test.
 
 ## Provenance
 
