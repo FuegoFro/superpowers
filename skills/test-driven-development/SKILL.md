@@ -207,6 +207,10 @@ When writing or changing any test, read [writing-good-tests.md](writing-good-tes
 - Keep test-only code in test utilities, out of production classes
 - Understand a dependency's side effects before mocking it
 
+When deciding *where* a test should stand — which entrypoint to drive and what to fake — read
+[testing-at-the-boundary.md](testing-at-the-boundary.md): drive the boundary the caller sees, fake only
+the slow or external edge, let everything in between run for real.
+
 ## Objections, Answered
 
 These come up honestly and deserve honest answers, not dismissal:
