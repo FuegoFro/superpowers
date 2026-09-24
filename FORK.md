@@ -134,16 +134,23 @@ the rest — the two styles coexist fine.
 
 1. `git fetch upstream` (`upstream` = https://github.com/obra/superpowers). If
    `upstream/main` introduces no new commits over the last sync, stop silently.
-2. Branch `sync/upstream-YYYY-MM-DD` off `main`; **merge** `upstream/main` (merge, not rebase —
-   `main` is public and PR-reviewed; `git diff upstream/main...main` remains the canonical view
-   of the fork's net delta).
+2. On `main`, **merge** `upstream/main` (merge, not rebase — `main` is public;
+   `git diff upstream/main...main` remains the canonical view of the fork's net delta).
 3. Resolve conflicts semantically: upstream's *content* changes win; this fork's *stance* wins.
    Re-apply the style contract to the merged text rather than picking a side textually.
 4. Sweep new/changed upstream files for contract violations (markers: `EXTREMELY`,
    `not negotiable`, `no choice`, `rationaliz` outside testing contexts, `lying`,
    `Delete means delete`, all-caps imperatives) and apply rules 1–5 with rule-6 restraint.
-5. Push the branch and open a PR to `main` listing: upstream commits merged, conflicts and how
-   resolved, and any new text the contract was applied to. Never push to `main` directly.
+5. Push `main` directly — fast-forward only, never force. No PR: the merge commit's message
+   records the upstream commits merged and how each conflict was resolved, and a separate
+   adaptation commit lists any new text the contract was applied to. If a conflict is too
+   entangled to resolve confidently, don't push `main`; push a `sync/upstream-YYYY-MM-DD`
+   branch with the partial resolution instead and flag it for a human.
+6. Rebase `danny/discord-adaptations` onto the new `main` and push it with
+   `--force-with-lease` pinned to its pre-rebase SHA. It is the one branch that gets rewritten;
+   resolve its conflicts the same way — upstream's content, the branch's intent. If the rebase
+   is too entangled, leave the branch untouched and push the attempt as
+   `danny/discord-adaptations-rebase-YYYY-MM-DD` for a human.
 
 ## Provenance
 
