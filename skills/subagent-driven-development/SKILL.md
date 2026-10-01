@@ -33,8 +33,9 @@ stop and ask.
 Use this skill when you have a plan whose tasks are mostly independent and
 your human partner has not chosen inline execution. Tightly coupled tasks,
 or no plan yet: execute manually or brainstorm first. Partner chose inline,
-or no subagent tool: superpowers:executing-plans. The decision graph, and
-how this differs from inline execution: [process.md](process.md).
+or no subagent tool: superpowers:executing-plans. The decision graph, how
+this differs from inline execution, and why subagents never inherit your
+session's context: [process.md](process.md).
 
 ## The Process
 
@@ -100,8 +101,19 @@ Use the least powerful model that can handle each role to conserve cost and incr
 omitted model inherits your session's model — often the most capable and
 most expensive — which silently defeats this section.
 
-The tier for each role, and why turn count beats token price:
-[model-selection.md](model-selection.md).
+You choose a model on every dispatch, so the tiers stay here:
+
+- Implementer whose plan text holds the complete code (transcription plus
+  testing), or a single-file mechanical fix: the cheapest tier.
+- Implementer working from prose, and task reviewers: mid-tier at least.
+  Turn count beats token price: the cheapest models routinely take 2-3× the
+  turns on multi-step work, costing more overall.
+- Multi-file integration or debugging: a standard model. Design judgment,
+  and the final whole-branch review: the most capable available model.
+- Scoped re-review of a small fix diff: cheap-to-mid. Fix rounds 4-5: at
+  least one tier above the implementer that got stuck.
+
+Complexity signals and the full text: [model-selection.md](model-selection.md).
 
 ## The Task Loop
 
@@ -120,16 +132,17 @@ Record BASE (`git rev-parse HEAD`) before dispatching — the review package
 and fix-round diffs need it.
 
 - **Dispatch by reference:** run this skill's
-  `bash scripts/dispatch implementer PLAN_FILE N --note NOTE_FILE`. It
-  writes the task brief (the task's text plus the plan's shared header) and
-  the filled implementer template to workspace files and prints a one-line
-  prompt; send that line, with the model set on the call. The note carries
-  what the brief cannot: where the task fits, interfaces and rulings from
-  earlier tasks, your resolution of any ambiguity, and any plan section the
-  script names as outside every brief. Never make a subagent read the whole
-  plan file. Why: one session's 60 hand-filled dispatches came to 286k
-  characters, all resident in the controller afterward; dispatches by
-  reference ran at half the size.
+  `bash scripts/dispatch implementer PLAN_FILE N --note NOTE_FILE` and send
+  the one-line prompt it prints, with the model set on the call. It writes
+  the task brief (the task's text plus the plan's shared header) and the
+  filled template to the workspace. The note carries what the brief cannot:
+  where the task fits, interfaces and rulings from earlier tasks, your
+  resolution of any ambiguity, any plan section the script names as outside
+  every brief. Exact values (numbers, magic strings, signatures, test
+  cases) appear only in the brief, so the brief stays the single source of
+  requirements. Never make a subagent read the whole plan file. Why: one
+  session's 60 hand-filled dispatches came to 286k characters, all resident
+  in the controller afterward.
 - **Report file:** the implementer writes its full report beside the brief
   (`…/task-N-report.md`) and returns only status, commits, a one-line test
   summary, and concerns.
@@ -148,7 +161,7 @@ Template: [implementer-prompt.md](implementer-prompt.md)
 
 Implementer subagents report one of four statuses. Handle each appropriately:
 
-**DONE:** Render the task review (`bash scripts/dispatch reviewer PLAN_FILE N BASE HEAD`; BASE is the commit you recorded before dispatching the implementer — never `HEAD~1`, which silently drops all but the last commit of a multi-commit task), then dispatch the task reviewer with the line it prints. If the plan mandates a commit trailer, first run `bash scripts/commit-check BASE HEAD --trailer 'LINE'`: implementers have substituted their own model's name, and a count over several commits has been misread as all present. A commit without it goes back to the implementer as a finding.
+**DONE:** If the plan mandates a commit trailer, first run `bash scripts/commit-check BASE HEAD --trailer 'LINE'`: implementers have substituted their own model's name, and a count over several commits has been misread as all present. A commit without it goes back to the implementer as a finding. Then render the task review (`bash scripts/dispatch reviewer PLAN_FILE N BASE HEAD`; BASE is the commit you recorded before dispatching the implementer — never `HEAD~1`, which silently drops all but the last commit of a multi-commit task) and dispatch the reviewer with the line it prints.
 
 **DONE_WITH_CONCERNS:** Read the concerns first: correctness or scope concerns are addressed before review; observations are noted ([task-loop.md](task-loop.md)).
 
@@ -173,15 +186,17 @@ required. Implementer self-review never replaces the task review; both are
 needed.
 
 - Hand the reviewer files: `scripts/dispatch reviewer` fills the template
-  with a review package (commits, stat, full diff, and the ledger's rulings
-  and deferred findings, in a file that never enters your context), the
-  same brief, the report file, and the plan's Global Constraints verbatim.
-  The constraints block is the reviewer's attention lens; spec requirements
-  that bind this task beyond it go in `--note`: exact values, exact
-  formats, and stated relationships between components ("same layout as
-  X"). Never dispatch a task reviewer without a diff file (without bash:
-  `git log`, `git diff --stat` and `git diff -U10` for the range, in one
-  file).
+  with the same brief, the report file, the plan's Global Constraints
+  verbatim, and a review package (commits, stat, full diff, the ledger's
+  rulings and deferred findings) that never enters your context. The
+  constraints block is the reviewer's attention lens. The reviewer's
+  template already carries the process rules (YAGNI, test hygiene, review
+  method) — the constraints block is for what THIS project's spec demands,
+  so spec requirements binding this task beyond the plan's go in `--note`:
+  exact values, exact formats, stated relationships between components
+  ("same layout as X"). Never dispatch a task reviewer without a diff file
+  (without bash: `git log`, `git diff --stat` and `git diff -U10` for the
+  range, in one file).
 - Do not add open-ended directives like "check all uses" or "run race tests
   if useful" without a concrete, task-specific reason
 - Do not ask a reviewer to re-run tests the implementer already ran on the
@@ -275,16 +290,14 @@ parked-with-ruling at the cap.
 ## Final Review
 
 Run `bash scripts/dispatch final PLAN_FILE MERGE_BASE HEAD --note NOTE_FILE`
-(MERGE_BASE = the commit the branch started from, e.g.
-`git merge-base main HEAD`; the note says what was built and names the
-spec). It fills superpowers:requesting-code-review's
+(MERGE_BASE: where the branch started, e.g. `git merge-base main HEAD`; the
+note: what was built, and the spec path) and dispatch on the most capable
+available model. It fills
 [code-reviewer.md](../requesting-code-review/code-reviewer.md) with the
-plan's shared header and a review package ending in every `Ruling:`, parked
-and deferred-minor line from the ledger, so the reviewer can triage which
-must be fixed before merge. Dispatch on the most capable available model.
-Handing a reviewer your rulings is not pre-judging: each arrives as a
-decision with its cost if wrong, to weigh and re-grade, and none tells it
-what not to flag.
+plan's shared header and a review package ending in every `Ruling:` and
+deferred-minor line from the ledger, so the reviewer can triage which must
+be fixed before merge. That is not pre-judging: each ruling arrives with its
+cost if wrong, to weigh and re-grade, and none says what not to flag.
 
 If the final whole-branch review returns findings, dispatch ONE fix subagent
 with the complete findings list — not one fixer per finding.
