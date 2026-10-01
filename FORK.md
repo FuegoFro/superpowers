@@ -221,7 +221,9 @@ the rest — the two styles coexist fine.
 7. Before step 6's push, re-run `tests/claude-code/test-host-integration-policy.sh` and
    `tests/claude-code/test-worktree-path-policy.sh` on the rebased branch. A red assertion means
    the rebase flattened a fork delta back to upstream's text — re-apply the host-integration
-   rule rather than editing the test.
+   rule rather than editing the test. Run `tests/claude-code/test-skill-body-size.sh` too: this
+   branch adds text to skills `main` keeps near the cap, so a clean rebase can still push one
+   over it (rule 7).
 
 ## Provenance
 

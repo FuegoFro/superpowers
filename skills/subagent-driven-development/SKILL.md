@@ -33,9 +33,8 @@ stop and ask.
 Use this skill when you have a plan whose tasks are mostly independent and
 your human partner has not chosen inline execution. Tightly coupled tasks,
 or no plan yet: execute manually or brainstorm first. Partner chose inline,
-or no subagent tool: superpowers:executing-plans. The decision graph, how
-this differs from inline execution, and why subagents never inherit your
-session's context: [process.md](process.md).
+or no subagent tool: superpowers:executing-plans. The decision graph, and how
+this differs from inline execution: [process.md](process.md).
 
 ## The Process
 
@@ -80,7 +79,7 @@ a ledger file, not only in todos.
 
 Read the plan once, note its context and Global Constraints, and create a
 todo per task (`bash scripts/task-brief PLAN_FILE --outline` maps a large
-plan's tasks and sections by line range and size). If the plan names a Spec, read that too: the spec is the
+one). If the plan names a Spec, read that too: the spec is the
 authority the plan argues from, and conflicts inside the plan resolve
 against it. A plan with no reachable spec gets a ledger note saying so —
 rulings made without one are provisional.
@@ -101,7 +100,7 @@ Use the least powerful model that can handle each role to conserve cost and incr
 omitted model inherits your session's model — often the most capable and
 most expensive — which silently defeats this section.
 
-You choose a model on every dispatch, so the tiers stay here:
+The tiers:
 
 - Implementer whose plan text holds the complete code (transcription plus
   testing), or a single-file mechanical fix: the cheapest tier.
@@ -134,15 +133,14 @@ and fix-round diffs need it.
 - **Dispatch by reference:** run this skill's
   `bash scripts/dispatch implementer PLAN_FILE N --note NOTE_FILE` and send
   the one-line prompt it prints, with the model set on the call. It writes
-  the task brief (the task's text plus the plan's shared header) and the
+  the brief (task text plus the plan's shared header) and the
   filled template to the workspace. The note carries what the brief cannot:
   where the task fits, interfaces and rulings from earlier tasks, your
   resolution of any ambiguity, any plan section the script names as outside
   every brief. Exact values (numbers, magic strings, signatures, test
   cases) appear only in the brief, so the brief stays the single source of
   requirements. Never make a subagent read the whole plan file. Why: one
-  session's 60 hand-filled dispatches came to 286k characters, all resident
-  in the controller afterward.
+  session's 60 hand-filled dispatches came to 286k characters.
 - **Report file:** the implementer writes its full report beside the brief
   (`…/task-N-report.md`) and returns only status, commits, a one-line test
   summary, and concerns.
@@ -161,7 +159,7 @@ Template: [implementer-prompt.md](implementer-prompt.md)
 
 Implementer subagents report one of four statuses. Handle each appropriately:
 
-**DONE:** If the plan mandates a commit trailer, first run `bash scripts/commit-check BASE HEAD --trailer 'LINE'`: implementers have substituted their own model's name, and a count over several commits has been misread as all present. A commit without it goes back to the implementer as a finding. Then render the task review (`bash scripts/dispatch reviewer PLAN_FILE N BASE HEAD`; BASE is the commit you recorded before dispatching the implementer — never `HEAD~1`, which silently drops all but the last commit of a multi-commit task) and dispatch the reviewer with the line it prints.
+**DONE:** If the plan mandates a commit trailer, first run `bash scripts/commit-check BASE HEAD --trailer 'LINE'`: implementers have substituted their own model's name, and a count across commits has been misread. A commit without it goes back to the implementer as a finding. Then render the task review (`bash scripts/dispatch reviewer PLAN_FILE N BASE HEAD`; BASE is the commit you recorded before dispatching the implementer — never `HEAD~1`, which silently drops all but the last commit of a multi-commit task) and send the line it prints.
 
 **DONE_WITH_CONCERNS:** Read the concerns first: correctness or scope concerns are addressed before review; observations are noted ([task-loop.md](task-loop.md)).
 
@@ -187,8 +185,8 @@ needed.
 
 - Hand the reviewer files: `scripts/dispatch reviewer` fills the template
   with the same brief, the report file, the plan's Global Constraints
-  verbatim, and a review package (commits, stat, full diff, the ledger's
-  rulings and deferred findings) that never enters your context. The
+  verbatim, and a review package (the diff, plus the ledger's rulings and
+  deferred findings) that never enters your context. The
   constraints block is the reviewer's attention lens. The reviewer's
   template already carries the process rules (YAGNI, test hygiene, review
   method) — the constraints block is for what THIS project's spec demands,
@@ -289,24 +287,21 @@ parked-with-ruling at the cap.
 
 ## Final Review
 
-**Run the host's review machinery first:** in Claude Code `/code-review`,
-`/security-review` when the diff touches auth, input handling or secrets, and
-`/simplify` plus any repo-specific pass (order and reasons:
-superpowers:requesting-code-review Step 0). Fold what they report into the
-findings list below, and commit any edits they make (`/simplify` makes some)
-before rendering the review: its package reads only `MERGE_BASE..HEAD`. They
-read the diff for defects; the reviewer below reads it against the plan. Run
-both.
+**Run the host's review commands first** (`/code-review`, `/security-review`
+for auth, input or secrets, `/simplify`; order in
+superpowers:requesting-code-review Step 0) and fold their findings into the
+list below. Commit any edits they make first: the package reads only
+`MERGE_BASE..HEAD`. They check for defects, the reviewer checks against the
+plan; run both.
 
 Run `bash scripts/dispatch final PLAN_FILE MERGE_BASE HEAD --note NOTE_FILE`
-(MERGE_BASE: where the branch started, e.g. `git merge-base main HEAD`; the
-note: what was built, and the spec path) and dispatch on the most capable
-available model. It fills
+(MERGE_BASE: e.g. `git merge-base main HEAD`; the note: what was built,
+and the spec path) and dispatch on the most capable available model. It fills
 [code-reviewer.md](../requesting-code-review/code-reviewer.md) with the
-plan's shared header and a review package ending in every `Ruling:` and
-deferred-minor line from the ledger, so the reviewer can triage which must
-be fixed before merge. That is not pre-judging: each ruling arrives with its
-cost if wrong, to weigh and re-grade, and none says what not to flag.
+plan's shared header and a review package ending in the ledger's `Ruling:`
+and deferred-minor lines, for the reviewer to triage before merge. That is
+not pre-judging: each ruling carries its cost if wrong, to weigh and
+re-grade, and none says what not to flag.
 
 If the final whole-branch review returns findings, dispatch ONE fix subagent
 with the complete findings list — not one fixer per finding.
