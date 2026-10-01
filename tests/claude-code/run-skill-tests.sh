@@ -74,6 +74,7 @@ done
 
 # List of skill tests to run (fast unit tests)
 tests=(
+    "test-skill-body-size.sh"
     "test-worktree-path-policy.sh"
     "test-sdd-workspace.sh"
     "test-sdd-slicing.sh"

@@ -116,6 +116,19 @@ possible so upstream merges stay tractable. If a section is already measured-neu
 touch it — including upstream's descriptive use of "rationalization" as a *testing* term
 (documenting what baseline agents say under pressure), which is methodology, not framing.
 
+### 7. Skill bodies stay under the re-attach cap
+
+Claude Code re-attaches every invoked skill body after each compaction, cut at 20,000
+characters, so a longer SKILL.md silently loses its tail (in one measured session,
+subagent-driven-development lost its fix loop, Final Review and Finish after the first of 14
+compactions). SKILL.md keeps the rules with their reasons, recognition tables, the evidence
+behind a rule, and a one-line pointer per moved block. Flowcharts, worked examples, long
+procedures used once, bash and code samples, and checklists that duplicate prose move to
+sibling files, which load on demand with Read. A move relocates text unchanged and leaves the
+section heading behind with its pointer, so upstream merges conflict on small hunks and keep
+landing in the right file. `tests/claude-code/test-skill-body-size.sh` fails any SKILL.md over
+20,000 characters and warns above 12,000.
+
 ## Known risk and success metric
 
 The pressure-tested coercive phrasings may hold discipline better than trust phrasings under
@@ -138,6 +151,7 @@ the rest — the two styles coexist fine.
    `git diff upstream/main...main` remains the canonical view of the fork's net delta).
 3. Resolve conflicts semantically: upstream's *content* changes win; this fork's *stance* wins.
    Re-apply the style contract to the merged text rather than picking a side textually.
+   An upstream edit to a block this fork moved to a sibling (rule 7) goes into the sibling.
 4. Sweep new/changed upstream files for contract violations (markers: `EXTREMELY`,
    `not negotiable`, `no choice`, `rationaliz` outside testing contexts, `lying`,
    `Delete means delete`, all-caps imperatives) and apply rules 1–5 with rule-6 restraint.
