@@ -20,7 +20,10 @@ plan=$1
 n=$2
 sdd="$(cd "$(dirname "$0")/../../subagent-driven-development/scripts" && pwd)"
 
-out=$("$sdd/task-brief" "$plan" "$n")
+# --no-header: the inline session read the plan's shared header at setup and
+# keeps it in context, so a copy in every brief would only pile up (12 tasks
+# under a 5KB header is 60KB re-read on every later turn).
+out=$("$sdd/task-brief" "$plan" "$n" --no-header)
 brief=$(printf '%s\n' "$out" | sed -n 's/^wrote \(.*\): [0-9][0-9]* lines$/\1/p')
 [ -n "$brief" ] || { echo "task-brief did not report a path: $out" >&2; exit 1; }
 

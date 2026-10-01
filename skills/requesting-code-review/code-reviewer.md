@@ -1,6 +1,8 @@
 # Code Reviewer Prompt Template
 
 Use this template when dispatching a code reviewer subagent.
+For a plan's final review, subagent-driven-development's
+`bash scripts/dispatch final PLAN_FILE MERGE_BASE HEAD` renders it into a file.
 
 **Purpose:** Review completed work against requirements and code quality standards before it cascades into more work.
 
@@ -29,6 +31,13 @@ Subagent (general-purpose):
     git diff --stat [BASE_SHA]..[HEAD_SHA]
     git diff [BASE_SHA]..[HEAD_SHA]
     ```
+
+    If you were given a review package file, read it once instead of running
+    these commands: it holds the commit list, the stat summary and the full
+    diff with context. Its "Prior rulings and deferred findings" section,
+    when present, lists decisions the executor took, each with what it costs
+    if wrong, and findings it deferred. Weigh each against the code and grade
+    independently; triage the deferred ones as must-fix-before-merge or not.
 
     ## The spec is a vision document
 

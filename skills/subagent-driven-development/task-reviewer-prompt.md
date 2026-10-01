@@ -2,7 +2,9 @@
 
 Use this template when dispatching a task reviewer subagent. The reviewer
 reads the task's diff once and returns two verdicts: spec compliance and
-code quality.
+code quality. `bash scripts/dispatch reviewer PLAN_FILE N BASE HEAD` renders
+it into a file with every placeholder filled, so the dispatch itself is one
+line naming that file.
 
 **Purpose:** Verify one task's implementation matches its requirements (nothing
 more, nothing less) and is well-built (clean, tested, maintainable)
@@ -68,7 +70,10 @@ Subagent (general-purpose):
     the diff. Design rationales in the report are claims too: "left it per
     YAGNI," "kept it simple deliberately," or any other justification is the
     implementer grading their own work. Judge the code on its merits — a
-    stated rationale never downgrades a finding's severity.
+    stated rationale never downgrades a finding's severity. The same holds
+    for the diff file's "Prior rulings and deferred findings" section, when
+    it has one: those are the controller's calls, each with what it costs
+    if wrong. Weigh each against the code and report what you find.
 
     ## Tests
 

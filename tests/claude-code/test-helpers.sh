@@ -11,6 +11,11 @@ run_claude() {
 
     # Build command as an argv array so timeout wraps claude directly.
     local cmd=(claude -p "$prompt")
+    # Plain `claude -p` loads the installed plugin; set this to a checkout
+    # to test that checkout's skills instead (--plugin-dir overrides it).
+    if [ -n "${SUPERPOWERS_PLUGIN_DIR:-}" ]; then
+        cmd+=(--plugin-dir "$SUPERPOWERS_PLUGIN_DIR")
+    fi
     if [ -n "$allowed_tools" ]; then
         cmd+=(--allowed-tools="$allowed_tools")
     fi

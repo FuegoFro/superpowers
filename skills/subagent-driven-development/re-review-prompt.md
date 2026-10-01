@@ -3,6 +3,8 @@
 Use this template when dispatching a re-review after a fix round. The
 re-reviewer verifies the findings were addressed and checks the fix diff for
 new breakage. It is not a fresh review — the full review already happened.
+`bash scripts/dispatch re-review PLAN_FILE N FIX_BASE HEAD --note FINDINGS_FILE`
+renders it into a file with every placeholder filled.
 
 **Purpose:** Verify each finding from the previous review was addressed, and
 that the fix itself broke nothing.

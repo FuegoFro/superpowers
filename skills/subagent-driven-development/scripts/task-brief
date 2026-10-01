@@ -3,41 +3,163 @@
 # implementer reads in one call, so the task text never has to be pasted
 # through the controller's context.
 #
-# Usage: task-brief PLAN_FILE TASK_NUMBER [OUTFILE]
+# The brief starts with the plan's shared header (everything before the first
+# Task heading, minus the H1 title: Goal, Global Constraints, Review Focus, and
+# any amendments placed there), because a task slab without it loses the rules
+# that bind every task. The slab ends at the next heading of the same or
+# higher level, so a section between tasks (an amendment, a self-review) is not
+# glued onto the task above it; such sections are named on stderr.
+#
+# Usage: task-brief PLAN_FILE TASK_NUMBER [OUTFILE] [--no-header]
+#        task-brief PLAN_FILE header [OUTFILE]   the shared header alone
+#        task-brief PLAN_FILE --outline          one line per section, with sizes
 # Default OUTFILE: <repo-root>/.superpowers/sdd/<plan-basename>/task-<N>-brief.md
-# (per plan and per worktree; concurrent runs of the SAME plan in the same
-# working tree share it).
+# (header: plan-header.md; per plan and per worktree; concurrent runs of the
+# SAME plan in the same working tree share it).
 set -euo pipefail
 
-if [ $# -lt 2 ] || [ $# -gt 3 ]; then
-  echo "usage: task-brief PLAN_FILE TASK_NUMBER [OUTFILE]" >&2
+usage() {
+  echo "usage: task-brief PLAN_FILE TASK_NUMBER [OUTFILE] [--no-header]" >&2
+  echo "       task-brief PLAN_FILE header [OUTFILE]" >&2
+  echo "       task-brief PLAN_FILE --outline" >&2
   exit 2
-fi
+}
 
-plan=$1
-n=$2
+header=1
+args=()
+for a in "$@"; do
+  case "$a" in
+    --no-header) header=0 ;;
+    *) args+=("$a") ;;
+  esac
+done
+[ "${#args[@]}" -ge 2 ] && [ "${#args[@]}" -le 3 ] || usage
+
+plan=${args[0]}
+n=${args[1]}
 [ -f "$plan" ] || { echo "no such plan file: $plan" >&2; exit 2; }
 
-if [ $# -eq 3 ]; then
-  out=$3
+# Fence tracking for the awk programs below, after CommonMark: a fence opens
+# with a run of three or more backticks or tildes and closes only on a run of
+# the same character at least as long with nothing after it. A slab ends at
+# the next heading, so a fence the tracker loses turns every "# comment" in
+# a code block into a heading that cuts the task short; plans nest ``` blocks
+# inside ````markdown ones (writing-plans' own task template) and use ~~~.
+FENCE_AWK='
+function fence(s,   c, k) {
+  sub(/^[ \t]+/, "", s)
+  c = substr(s, 1, 1)
+  if (c != "`" && c != "~") return 0
+  k = 0
+  while (substr(s, k + 1, 1) == c) k++
+  if (k < 3) return 0
+  if (!infence) { infence = 1; fch = c; flen = k; return 1 }
+  if (c == fch && k >= flen && substr(s, k + 1) ~ /^[ \t\r]*$/) { infence = 0; return 1 }
+  return 0
+}
+'
+
+# Split the plan into sections, one tab-separated row each:
+#   KIND  START  END  BYTES  LABEL
+# KIND is header (before the first Task heading; absent when the plan opens
+# with one), task:<N>, or outside (a heading at or above the current task's
+# level that is not a Task heading). Rows partition the file, so their byte
+# counts sum to its size. Fence-aware: a heading inside a code block is text.
+sections() {
+  LC_ALL=C awk "$FENCE_AWK"'
+    function flush() {
+      if (start && NR - 1 >= start) printf "%s\t%d\t%d\t%d\t%s\n", kind, start, NR - 1, bytes, label
+    }
+    function open(k, l) { flush(); kind = k; label = l; start = NR; bytes = 0 }
+    BEGIN { kind = "header"; label = "(before the first task)"; start = 1 }
+    { fence($0) }
+    !infence && /^#+[ \t]/ {
+      level = match($0, /[^#]/) - 1
+      if ($0 ~ /^#+[ \t]+Task[ \t]+[0-9]+/) {
+        num = $0
+        sub(/^#+[ \t]+Task[ \t]+/, "", num)
+        sub(/[^0-9].*$/, "", num)
+        open("task:" num, $0); tasklevel = level
+      } else if (kind != "header" && level <= tasklevel) {
+        open("outside", $0)
+      }
+    }
+    { bytes += length($0) + 1 }
+    END { NR = NR + 1; flush() }
+  ' "$1"
+}
+
+if [ "$n" = "--outline" ]; then
+  [ "${#args[@]}" -eq 2 ] || usage
+  echo "plan: $plan ($(wc -l < "$plan" | tr -d ' ') lines, $(wc -c < "$plan" | tr -d ' ') bytes)"
+  sections "$plan" | awk -F '\t' '{
+    k = $1; sub(/^task:/, "Task ", k)
+    printf "%-9s %6d-%-6d %8d bytes  %s\n", k, $2, $3, $4, ($1 == "header" ? "" : $5)
+  }'
+  exit 0
+fi
+
+case "$n" in
+  header) ;;
+  *[!0-9]* | "") usage ;;
+esac
+
+if [ "${#args[@]}" -eq 3 ]; then
+  out=${args[2]}
 else
   # Invoke via bash rather than direct exec: some extractors (Python zipfile)
   # strip Unix exec bits when unpacking marketplace packages (#2040).
   dir=$("${BASH:-bash}" "$(cd "$(dirname "$0")" && pwd)/sdd-workspace" "$plan")
-  out="$dir/task-${n}-brief.md"
+  if [ "$n" = header ]; then out="$dir/plan-header.md"; else out="$dir/task-${n}-brief.md"; fi
 fi
 
-awk -v n="$n" '
-  /^```/ { infence = !infence }
-  !infence && /^#+[ \t]+Task[ \t]+[0-9]+/ {
-    intask = ($0 ~ ("^#+[ \t]+Task[ \t]+" n "([^0-9]|$)"))
-  }
-  intask { print }
-' "$plan" > "$out"
+table=$(sections "$plan")
 
-if [ ! -s "$out" ]; then
+# The shared header without its H1 title line and surrounding blank lines.
+print_header() {
+  printf '%s\n' "$table" | awk -F '\t' '$1 == "header" { print $2, $3 }' | {
+    read -r a b || return 0
+    sed -n "${a},${b}p" "$plan" | awk "$FENCE_AWK"'
+      { fence($0) }
+      !infence && !seen && /^#[ \t]/ { seen = 1; next }
+      { lines[++c] = $0 }
+      END {
+        s = 1; while (s <= c && lines[s] ~ /^[ \t\r]*$/) s++
+        e = c; while (e >= s && lines[e] ~ /^[ \t\r]*$/) e--
+        for (i = s; i <= e; i++) print lines[i]
+      }'
+  }
+}
+
+if [ "$n" = header ]; then
+  print_header > "$out"
+  [ -s "$out" ] || { echo "no shared header before the first task in ${plan}" >&2; exit 3; }
+  echo "wrote ${out}: $(wc -l < "$out" | tr -d ' ') lines"
+  exit 0
+fi
+
+slab=$(printf '%s\n' "$table" | awk -F '\t' -v k="task:$n" '$1 == k { print $2 "," $3 "p" }')
+if [ -z "$slab" ]; then
   echo "task ${n} not found in ${plan} (no heading matching 'Task ${n}')" >&2
   exit 3
 fi
 
+{
+  if [ "$header" -eq 1 ]; then
+    shared=$(print_header)
+    if [ -n "$shared" ]; then
+      printf '## Shared header (from the plan)\n\n%s\n\n## This task\n\n' "$shared"
+    fi
+  fi
+  exprs=()
+  for range in $slab; do exprs+=(-e "$range"); done
+  sed -n "${exprs[@]}" "$plan"
+} > "$out"
+
 echo "wrote ${out}: $(wc -l < "$out" | tr -d ' ') lines"
+
+outside=$(printf '%s\n' "$table" | awk -F '\t' '$1 == "outside" { printf "  lines %d-%d: %s\n", $2, $3, $5 }')
+if [ -n "$outside" ]; then
+  echo "note: these plan sections sit between or after tasks and are in no brief; carry any that bind Task ${n} in the dispatch:" >&2
+  printf '%s\n' "$outside" >&2
+fi
