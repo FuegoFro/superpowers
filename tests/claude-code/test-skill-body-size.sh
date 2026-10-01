@@ -1,18 +1,32 @@
 #!/usr/bin/env bash
 # Claude Code re-attaches every invoked skill body after each compaction, cut at
 # 20,000 characters, so anything past that point silently drops out of a long
-# session. Fails when a skills/*/SKILL.md exceeds 20,000 characters, warns above
-# 12,000, and fails when a SKILL.md links to a local .md file that does not exist
-# (moved reference blocks are reached only through those links).
+# session. What is re-attached is "Base directory for this skill: <dir>", a
+# blank line, and the body without its frontmatter, so that is what is
+# measured, with room for a long plugin-cache path. Fails when it exceeds
+# 20,000 characters, warns above 12,000, and fails when a SKILL.md links to a
+# local .md file that does not exist (moved reference blocks are reached only
+# through those links).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CAP=20000
 WARN=12000
+# "Base directory for this skill: " (31) + a 160-char install path + "\n\n".
+PREFIX=193
 
-# wc -m counts characters only under a UTF-8 locale.
-export LC_ALL=C.UTF-8
+# wc -m counts characters only under a UTF-8 locale; macOS may lack C.UTF-8.
+for loc in C.UTF-8 en_US.UTF-8; do
+    if [[ "$(printf '\xe2\x80\x94' | LC_ALL=$loc wc -m 2>/dev/null | tr -d ' ')" == 1 ]]; then
+        export LC_ALL=$loc
+        break
+    fi
+done
+[[ "${LC_ALL:-}" == *UTF-8 ]] || echo "  [WARN] no UTF-8 locale: counting bytes, which overstates multibyte text"
+
+# The body as re-attached: everything after the closing "---" of the frontmatter.
+body() { awk 'NR == 1 && /^---$/ { fm = 1; next } fm && /^---$/ { fm = 0; next } !fm' "$1"; }
 
 failures=0
 warnings=0
@@ -20,15 +34,15 @@ warnings=0
 for skill in "$REPO_ROOT"/skills/*/SKILL.md; do
     dir="$(dirname "$skill")"
     name="$(basename "$dir")"
-    chars="$(wc -m <"$skill")"
+    chars=$(($(body "$skill" | wc -m) + PREFIX))
     if ((chars > CAP)); then
-        echo "  [FAIL] $name: $chars chars, over the $CAP-char re-attach cap"
+        echo "  [FAIL] $name: $chars chars re-attached, over the $CAP-char cap"
         failures=$((failures + 1))
     elif ((chars > WARN)); then
-        echo "  [WARN] $name: $chars chars (above $WARN)"
+        echo "  [WARN] $name: $chars chars re-attached (above $WARN)"
         warnings=$((warnings + 1))
     else
-        echo "  [PASS] $name: $chars chars"
+        echo "  [PASS] $name: $chars chars re-attached"
     fi
 
     while IFS= read -r link; do

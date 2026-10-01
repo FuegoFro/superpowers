@@ -126,8 +126,10 @@ behind a rule, and a one-line pointer per moved block. Flowcharts, worked exampl
 procedures used once, bash and code samples, and checklists that duplicate prose move to
 sibling files, which load on demand with Read. A move relocates text unchanged and leaves the
 section heading behind with its pointer, so upstream merges conflict on small hunks and keep
-landing in the right file. `tests/claude-code/test-skill-body-size.sh` fails any SKILL.md over
-20,000 characters and warns above 12,000.
+landing in the right file; subsections move with their section, under its one pointer.
+`tests/claude-code/test-skill-body-size.sh` fails when a SKILL.md as re-attached (the "Base
+directory" line plus the body without frontmatter) exceeds 20,000 characters, and warns above
+12,000.
 
 ## Known risk and success metric
 

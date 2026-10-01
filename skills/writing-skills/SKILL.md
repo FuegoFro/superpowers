@@ -421,3 +421,8 @@ Note the deferral in the commit or PR — openly deferred beats silently skipped
 **IMPORTANT: Create a todo for EACH item of the checklist in
 [creation-checklist.md](creation-checklist.md)** (RED, GREEN, REFACTOR, quality
 checks, deployment): untracked checklist items are the ones that get skipped.
+
+## Discovery Workflow
+
+How future agents find a skill, and why searchable terms go early and often:
+[skill-discovery.md](skill-discovery.md#discovery-workflow).
