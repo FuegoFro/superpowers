@@ -4,19 +4,33 @@
 # call. Using the recorded per-task BASE (not HEAD~1) keeps multi-commit
 # tasks intact.
 #
-# Usage: review-package PLAN_FILE BASE HEAD [OUTFILE]
+# When the plan's ledger exists, the package ends with its Ruling:, parked
+# and deferred-minor lines, so a reviewer weighs the calls already made from
+# the same file instead of being handed the plan (--no-ledger leaves them out;
+# scoped re-reviews do not need them).
+#
+# Usage: review-package PLAN_FILE BASE HEAD [OUTFILE] [--ledger|--no-ledger]
 # Default OUTFILE: <repo-root>/.superpowers/sdd/<plan-basename>/review-<base7>..<head7>.diff
 # (named per range, so a re-review after fixes gets a distinct fresh file).
 set -euo pipefail
 
-if [ $# -lt 3 ] || [ $# -gt 4 ]; then
-  echo "usage: review-package PLAN_FILE BASE HEAD [OUTFILE]" >&2
+ledger=1
+args=()
+for a in "$@"; do
+  case "$a" in
+    --ledger) ledger=1 ;;
+    --no-ledger) ledger=0 ;;
+    *) args+=("$a") ;;
+  esac
+done
+if [ "${#args[@]}" -lt 3 ] || [ "${#args[@]}" -gt 4 ]; then
+  echo "usage: review-package PLAN_FILE BASE HEAD [OUTFILE] [--ledger|--no-ledger]" >&2
   exit 2
 fi
 
-plan=$1
-base=$2
-head=$3
+plan=${args[0]}
+base=${args[1]}
+head=${args[2]}
 [ -f "$plan" ] || { echo "no such plan file: $plan" >&2; exit 2; }
 
 git rev-parse --verify --quiet "$base" >/dev/null || { echo "bad BASE: $base" >&2; exit 2; }
@@ -27,12 +41,12 @@ git rev-parse --verify --quiet "$head" >/dev/null || { echo "bad HEAD: $head" >&
 git merge-base --is-ancestor "$base" "$head" || { echo "HEAD is not a descendant of BASE: ${base}..${head}" >&2; exit 3; }
 [ "$(git rev-list --count "${base}..${head}")" -gt 0 ] || { echo "empty commit range: ${base}..${head}" >&2; exit 3; }
 
-if [ $# -eq 4 ]; then
-  out=$4
+# Invoke via bash rather than direct exec: some extractors (Python zipfile)
+# strip Unix exec bits when unpacking marketplace packages (#2040).
+dir=$("${BASH:-bash}" "$(cd "$(dirname "$0")" && pwd)/sdd-workspace" "$plan")
+if [ "${#args[@]}" -eq 4 ]; then
+  out=${args[3]}
 else
-  # Invoke via bash rather than direct exec: some extractors (Python zipfile)
-  # strip Unix exec bits when unpacking marketplace packages (#2040).
-  dir=$("${BASH:-bash}" "$(cd "$(dirname "$0")" && pwd)/sdd-workspace" "$plan")
   out="$dir/review-$(git rev-parse --short "$base")..$(git rev-parse --short "$head").diff"
 fi
 
@@ -47,6 +61,17 @@ fi
   echo
   echo "## Diff"
   git diff -U10 "${base}..${head}"
+  if [ "$ledger" -eq 1 ] && [ -f "$dir/progress.md" ]; then
+    echo
+    echo "## Prior rulings and deferred findings"
+    echo
+    echo "From the plan's ledger: decisions the controller took, each with what it"
+    echo "costs if wrong, and findings deferred or parked so far. Weigh each against"
+    echo "the code and grade independently: a ruling is a claim to check, like the"
+    echo "implementer's report, never a reason to withhold or downgrade a finding."
+    echo
+    grep -E 'Ruling:|parked|minor \(deferred\)' "$dir/progress.md" || echo "(none yet)"
+  fi
 } > "$out"
 
 commits=$(git rev-list --count "${base}..${head}")

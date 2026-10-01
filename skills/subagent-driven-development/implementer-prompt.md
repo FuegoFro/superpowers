@@ -1,6 +1,8 @@
 # Implementer Subagent Prompt Template
 
 Use this template when dispatching an implementer subagent.
+`bash scripts/dispatch implementer PLAN_FILE N` renders it into a file with
+every placeholder filled, so the dispatch itself is one line naming that file.
 
 ```
 Subagent (general-purpose):

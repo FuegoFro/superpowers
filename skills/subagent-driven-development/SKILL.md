@@ -86,7 +86,9 @@ a ledger file, not only in todos.
   that happens, recover from `git log`.
 
 Read the plan once, note its context and Global Constraints, and create a
-todo per task. If the plan names a Spec, read that too: the spec is the
+todo per task (`bash scripts/task-brief PLAN_FILE --outline` lists every
+task and section with its line range and size, for reading a large plan in
+pieces). If the plan names a Spec, read that too: the spec is the
 authority the plan argues from, and conflicts inside the plan resolve
 against it. A plan with no reachable spec gets a ledger note saying so —
 rulings made without one are provisional.
@@ -169,22 +171,24 @@ child is noticed within minutes, not at the end of the session.
 Record BASE (`git rev-parse HEAD`) before dispatching — the review package
 and fix-round diffs need it.
 
-- **Task brief:** before dispatching an implementer, run this skill's
-  `bash scripts/task-brief PLAN_FILE N` — it extracts the task's full text to a
-  uniquely named file and prints the path. Compose the dispatch so the
-  brief stays the single source of
-  requirements. Your dispatch should contain: (1) one line on where this
-  task fits in the project; (2) the brief path, introduced as "read this
-  first — it is your requirements, with the exact values to use verbatim";
-  (3) interfaces and decisions from earlier tasks that the brief cannot
-  know; (4) your resolution of any ambiguity you noticed in the brief;
-  (5) the report-file path and report contract. Exact values (numbers,
-  magic strings, signatures, test cases) appear only in the brief. Never
-  make a subagent read the whole plan file.
-- **Report file:** name the implementer's report file after the brief
-  (brief `…/task-N-brief.md` → report `…/task-N-report.md`) and put it in
-  the dispatch prompt. The implementer writes the full report there and
-  returns only status, commits, a one-line test summary, and concerns.
+- **Dispatch by reference:** run this skill's
+  `bash scripts/dispatch implementer PLAN_FILE N --note NOTE_FILE`. It
+  extracts the task brief (the task's text plus the plan's shared header:
+  Goal, Global Constraints, Review Focus, amendments), names the report file
+  after it, fills the implementer template into a workspace file, and
+  prints a one-line prompt naming that file. That line is your dispatch,
+  with the model set on the call. The note is yours: one line on where the
+  task fits, interfaces and rulings from earlier tasks the brief cannot
+  know, your resolution of any ambiguity, and any plan section the script
+  names as sitting outside every brief that binds this task. Exact values
+  stay in the brief. Never make a subagent read the whole plan file. Why:
+  in one week's controller session, 60 hand-filled dispatches came to 286k
+  characters, all resident in the controller's context afterward, and
+  templates were re-read after compactions to refill them; dispatches by
+  reference in the same session ran at half the size.
+- **Report file:** the implementer writes its full report to the report
+  file (`…/task-N-report.md`, beside the brief) and returns only status,
+  commits, a one-line test summary, and concerns.
 - A dispatch prompt describes one task, not the session's history. Do not
   paste accumulated prior-task summaries ("state after Tasks 1-3") into
   later dispatches — a real session's dispatch hit 42k chars of which 99%
@@ -208,7 +212,7 @@ Template: [implementer-prompt.md](implementer-prompt.md)
 
 Implementer subagents report one of four statuses. Handle each appropriately:
 
-**DONE:** Generate the review package (`bash scripts/review-package PLAN_FILE BASE HEAD`, from this skill's directory — it prints the unique file path it wrote; BASE is the commit you recorded before dispatching the implementer — never `HEAD~1`, which silently drops all but the last commit of a multi-commit task), then dispatch the task reviewer with the printed path.
+**DONE:** Render the task review (`bash scripts/dispatch reviewer PLAN_FILE N BASE HEAD`, from this skill's directory — it generates the review package and prints the one-line prompt; BASE is the commit you recorded before dispatching the implementer — never `HEAD~1`, which silently drops all but the last commit of a multi-commit task), then dispatch the task reviewer with that line.
 
 **DONE_WITH_CONCERNS:** The implementer completed the work but flagged doubts. Read the concerns before proceeding. If the concerns are about correctness or scope, address them before review. If they're observations (e.g., "this file is getting large"), note them and proceed to review.
 
@@ -234,25 +238,17 @@ report missing either verdict — spec compliance AND task quality are both
 required. Implementer self-review never replaces the task review; both are
 needed.
 
-- Hand the reviewer its diff as a file: run this skill's
-  `bash scripts/review-package PLAN_FILE BASE HEAD` and pass the reviewer the file path
-  it prints (or, without bash: `git log --oneline`, `git diff --stat`,
-  and `git diff -U10` for the range, redirected to one uniquely named
-  file). The output never enters your own context, and the reviewer sees
-  the commit list, stat summary, and full diff with context in one Read
-  call. Use the BASE you recorded before dispatching the implementer —
-  never `HEAD~1`, which silently truncates multi-commit tasks. Never
-  dispatch a task reviewer without a diff file.
-- **Reviewer inputs:** the task reviewer gets three paths — the same brief
-  file, the report file, and the review package — plus the global
-  constraints that bind the task.
-- The global-constraints block you hand the reviewer is its attention
-  lens. Copy the binding requirements verbatim from the plan's Global
-  Constraints section or the spec: exact values, exact formats, and the
-  stated relationships between components ("same layout as X", "matches
-  Y"). The reviewer's template already carries the process rules (YAGNI,
-  test hygiene, review method) — the constraints block is for what THIS
-  project's spec demands.
+- Hand the reviewer files: `scripts/dispatch reviewer` runs
+  `review-package` (commit list, stat summary, full diff with context, and
+  the ledger's rulings and deferred findings, in one file that never
+  enters your context) and fills the template with that package, the same
+  brief, the report file, and the plan's Global Constraints copied
+  verbatim. The constraints block is the reviewer's attention lens; spec
+  requirements that bind this task beyond it go in `--note`: exact values,
+  exact formats, and stated relationships between components ("same
+  layout as X"). The template already carries the process rules. Never
+  dispatch a task reviewer without a diff file (without bash: `git log`,
+  `git diff --stat` and `git diff -U10` for the range, into one file).
 - Do not add open-ended directives like "check all uses" or "run race tests
   if useful" without a concrete, task-specific reason
 - Do not ask a reviewer to re-run tests the implementer already ran on the
@@ -314,10 +310,10 @@ output; dispatch the re-review once all three are present. Name the
 covering test files in the fix message — a one-line fix does not need the
 whole suite.
 
-**The re-review is scoped.** Run `bash scripts/review-package PLAN_FILE FIX_BASE HEAD`
-where FIX_BASE is the head the previous review saw, and dispatch
-[re-review-prompt.md](re-review-prompt.md) with the findings list, the
-brief, the report file, and the printed diff path. The re-reviewer verdicts
+**The re-review is scoped.** Run `bash scripts/dispatch re-review PLAN_FILE N FIX_BASE HEAD --note FINDINGS_FILE`
+where FIX_BASE is the head the previous review saw and the findings file
+holds the open findings verbatim; it packages the fix diff and fills
+[re-review-prompt.md](re-review-prompt.md). The re-reviewer verdicts
 each finding ADDRESSED or NOT ADDRESSED and flags new breakage in the fix
 diff only. New Critical/Important breakage in the fix diff joins the open
 findings list. Out-of-scope observations go to the ledger as deferred
@@ -365,24 +361,27 @@ parked-with-ruling at the cap.
 
 ## Final Review
 
-The final whole-branch review gets a package too: run
-`bash scripts/review-package PLAN_FILE MERGE_BASE HEAD` (MERGE_BASE = the commit the
-branch started from, e.g. `git merge-base main HEAD`) and include the
-printed path in the final review dispatch, so the final reviewer reads
-one file instead of re-deriving the branch diff with git commands. Dispatch
-on the most capable available model (see Model Selection), using
-superpowers:requesting-code-review's
-[code-reviewer.md](../requesting-code-review/code-reviewer.md). Point it at
-the ledger's deferred-minor and parked lines so it can triage which must be
-fixed before merge.
+The final whole-branch review is rendered too: run
+`bash scripts/dispatch final PLAN_FILE MERGE_BASE HEAD --note NOTE_FILE` (MERGE_BASE = the commit the
+branch started from, e.g. `git merge-base main HEAD`; the note says what
+was built and names the spec). The final reviewer gets the plan's shared
+header, the full plan path for questions the diff raises, and a review
+package ending in every `Ruling:`, parked and deferred-minor line from the
+ledger, so it can triage which must be fixed before merge without reading
+the plan or re-deriving the diff. Dispatch on the most capable available
+model (see Model Selection), using superpowers:requesting-code-review's
+[code-reviewer.md](../requesting-code-review/code-reviewer.md). Handing a
+reviewer your rulings is not pre-judging: each arrives as a decision with
+its cost if wrong, for the reviewer to weigh and re-grade, and none tells
+it what not to flag.
 
 If the final whole-branch review returns findings, dispatch ONE fix subagent
 with the complete findings list — not one fixer per finding.
 Per-finding fixers each rebuild context and re-run suites; a real
 session's final-review fix wave cost more than all its tasks combined.
-Then run exactly one scoped re-review of the fix wave
-(`bash scripts/review-package PLAN_FILE FIX_BASE HEAD` over the fix range,
-[re-review-prompt.md](re-review-prompt.md)).
+The fixer writes its report to `<workspace>/final-fix-report.md`. Then run
+exactly one scoped re-review of the fix wave
+(`bash scripts/dispatch re-review PLAN_FILE final FIX_BASE HEAD --note FINDINGS_FILE`).
 Adjudicate any residual findings as in the task loop's breaker: park with
 rulings, or rule on the load-bearing ones and ledger what you decided. Only
 the four classes above stop you here. There is no second fix wave —
