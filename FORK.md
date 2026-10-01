@@ -118,10 +118,21 @@ touch it — including upstream's descriptive use of "rationalization" as a *tes
 
 ### 7. Skill bodies stay under the re-attach cap
 
-Claude Code re-attaches every invoked skill body after each compaction, cut at 20,000
-characters, so a longer SKILL.md silently loses its tail (in one measured session,
-subagent-driven-development lost its fix loop, Final Review and Finish after the first of 14
-compactions). SKILL.md keeps the rules with their reasons, recognition tables, the evidence
+Claude Code re-attaches every invoked skill body after each compaction, within two limits
+(read from Claude Code 2.1.267's code, so re-check them when it changes):
+
+- **Per skill, 5,000 estimated tokens (about 20,000 characters).** A longer body is cut to
+  19,900 characters and ends with a marker saying to Read the skill path. The marker is easy
+  to pass over: the path it names is a plugin pseudo-path, the real directory is only in the
+  attachment's first line, and in an audit of 32 cut copies only 2 were followed by a read. In
+  one measured session subagent-driven-development lost its fix loop, Final Review and Finish
+  after the first of 14 compactions.
+- **All skills together, 25,000 estimated tokens (about 100,000 characters),** filled most
+  recently invoked first. A skill that does not fit is dropped whole, with no marker. A long
+  session that loads brainstorming through finishing-a-development-branch comes close.
+
+The cut copy replaces the stored one, so every later compaction carries it too; invoking the
+skill again restores the full text. SKILL.md keeps the rules with their reasons, recognition tables, the evidence
 behind a rule, and a one-line pointer per moved block. Flowcharts, worked examples, long
 procedures used once, bash and code samples, and checklists that duplicate prose move to
 sibling files, which load on demand with Read. A move relocates text unchanged and leaves the
@@ -157,6 +168,9 @@ the rest — the two styles coexist fine.
 4. Sweep new/changed upstream files for contract violations (markers: `EXTREMELY`,
    `not negotiable`, `no choice`, `rationaliz` outside testing contexts, `lying`,
    `Delete means delete`, all-caps imperatives) and apply rules 1–5 with rule-6 restraint.
+   Then run `tests/claude-code/test-skill-body-size.sh`: upstream grows skills, and a SKILL.md
+   that crosses the cap loses its tail after every compaction, so move the new block to a
+   sibling (rule 7) rather than raising the limit.
 5. Push `main` directly — fast-forward only, never force. No PR: the merge commit's message
    records the upstream commits merged and how each conflict was resolved, and a separate
    adaptation commit lists any new text the contract was applied to. If a conflict is too

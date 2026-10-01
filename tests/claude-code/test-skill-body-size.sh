@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Claude Code re-attaches every invoked skill body after each compaction, cut at
-# 20,000 characters, so anything past that point silently drops out of a long
-# session. What is re-attached is "Base directory for this skill: <dir>", a
+# 20,000 characters, so anything past that point drops out of a long session
+# (the cut ends with a Read-the-skill marker that sessions rarely act on; see
+# FORK.md rule 7 for the limits). What is re-attached is "Base directory for this skill: <dir>", a
 # blank line, and the body without its frontmatter, so that is what is
 # measured, with room for a long plugin-cache path. Fails when it exceeds
 # 20,000 characters, warns above 12,000, and fails when a SKILL.md links to a
