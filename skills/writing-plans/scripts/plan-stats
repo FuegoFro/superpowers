@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Size an implementation plan where it is written: total chars and lines, chars
+# per task, the share inside code fences, and the plan-to-spec ratio. Flags a
+# task slab or a ratio past the thresholds below and exits 1 if anything is
+# flagged (2 on bad arguments).
+#
+# Defaults come from one week of plans written to this skill: plans of 86k-225k
+# chars, one 6.3x its spec, read back in 16-22 chunks by revision agents. 25,000
+# chars is about 6k tokens, more than one implementer should absorb for a task;
+# a plan over 4x its spec is usually a transcript of the code.
+#
+# Usage: plan-stats PLAN_FILE [SPEC_FILE]
+set -euo pipefail
+
+MAX_TASK_CHARS=${PLAN_STATS_MAX_TASK_CHARS:-25000}
+MAX_RATIO=${PLAN_STATS_MAX_RATIO:-4}
+
+[ $# -ge 1 ] && [ $# -le 2 ] || { echo "usage: plan-stats PLAN_FILE [SPEC_FILE]" >&2; exit 2; }
+for f in "$@"; do [ -f "$f" ] || { echo "no such file: $f" >&2; exit 2; }; done
+
+# Characters, not bytes: UTF-8 continuation bytes are dropped before counting.
+count() { LC_ALL=C awk '{ gsub(/[\200-\277]/, ""); n += length($0) + 1 } END { print n + 0 }' "$1"; }
+
+LC_ALL=C awk -v max_task="$MAX_TASK_CHARS" -v plan="$1" '
+  function close_task() { if (task != "") { rows[++nr] = sprintf("  %-10s %8d chars", task, tchars); if (tchars > max_task) flags[++nf] = task " is " tchars " chars (over " max_task "): split it, or replace bodies with signatures and tests" } task = "" }
+  { line = $0; gsub(/[\200-\277]/, "", line); c = length(line) + 1; total += c }
+  /^```/ { fence += c; infence = !infence; if (task != "") tchars += c; next }
+  infence { fence += c }
+  !infence && /^#+[ \t]/ {
+    level = match($0, /[^#]/) - 1
+    if ($0 ~ /^#+[ \t]+Task[ \t]+[0-9]+/) {
+      close_task(); task = $0; sub(/^#+[ \t]+/, "", task); sub(/:.*$/, "", task); tchars = 0; tlevel = level; ntasks++
+    } else if (task != "" && level <= tlevel) close_task()
+  }
+  task != "" { tchars += c }
+  END {
+    close_task()
+    printf "plan: %s\n  %d chars, %d lines, %d tasks, %d%% inside code fences\n", plan, total, NR, ntasks, (total ? 100 * fence / total : 0)
+    for (i = 1; i <= nr; i++) print rows[i]
+    for (i = 1; i <= nf; i++) printf "FLAG: %s\n", flags[i] > "/dev/stderr"
+    exit (nf > 0)
+  }
+' "$1" && status=0 || status=$?
+
+if [ $# -eq 2 ]; then
+  p=$(count "$1")
+  s=$(count "$2")
+  ratio=$(awk -v p="$p" -v s="$s" 'BEGIN { printf "%.1f", (s ? p / s : 0) }')
+  echo "spec: $2"
+  echo "  $s chars; plan is ${ratio}x the spec"
+  if awk -v r="$ratio" -v m="$MAX_RATIO" 'BEGIN { exit !(r > m) }'; then
+    echo "FLAG: plan is ${ratio}x its spec (over ${MAX_RATIO}x): replace code bodies with signatures, test names and assertions" >&2
+    status=1
+  fi
+fi
+exit "$status"
