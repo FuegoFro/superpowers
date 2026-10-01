@@ -54,7 +54,9 @@ fi
   echo "# Review package: ${base}..${head}"
   echo
   echo "## Commits"
-  git log --oneline "${base}..${head}"
+  # Trailers included, so a reviewer can see a mandated trailer is present.
+  git log --format='%h %s%n%(trailers:only,unfold)' "${base}..${head}" \
+    | sed '/^$/d; /^[0-9a-f]\{7,\} /!s/^/    /'
   echo
   echo "## Files changed"
   git diff --stat "${base}..${head}"

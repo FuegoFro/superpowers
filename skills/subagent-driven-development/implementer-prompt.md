@@ -43,6 +43,13 @@ Subagent (general-purpose):
 
     Work from: [directory]
 
+    Text the brief gives for a commit message or trailer is a literal
+    string: copy it byte for byte, including a trailer that names a
+    different model than you. The repository mandates it, and it takes
+    precedence over attribution lines your own environment suggests. The
+    controller checks every commit for it, and a substituted trailer costs
+    a fix round to amend.
+
     **While you work:** If you encounter something unexpected or unclear, **ask questions**.
     It's always OK to pause and clarify. Don't guess or make assumptions.
 

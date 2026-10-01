@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# List each commit in BASE..HEAD with its trailers and, given --trailer,
+# fail when any commit lacks that exact line. Checked per commit, because an
+# aggregate count misleads: "grep -c" over three commits returned 2 and was
+# read as all present, and implementers have committed with their own model's
+# name in place of the trailer the plan mandated.
+#
+# Usage: commit-check BASE HEAD [--trailer LINE]
+# Exit: 0 when every commit carries LINE (or no --trailer), 1 when one lacks
+# it, 2 on bad arguments.
+set -euo pipefail
+
+usage() {
+  echo "usage: commit-check BASE HEAD [--trailer LINE]" >&2
+  exit 2
+}
+
+[ $# -eq 2 ] || [ $# -eq 4 ] || usage
+base=$1
+head=$2
+want=""
+if [ $# -eq 4 ]; then
+  [ "$3" = --trailer ] && [ -n "$4" ] || usage
+  want=$4
+fi
+
+git rev-parse --verify --quiet "$base^{commit}" >/dev/null || { echo "bad BASE: $base" >&2; exit 2; }
+git rev-parse --verify --quiet "$head^{commit}" >/dev/null || { echo "bad HEAD: $head" >&2; exit 2; }
+
+missing=()
+total=0
+for c in $(git rev-list --reverse "${base}..${head}"); do
+  total=$((total + 1))
+  git log -1 --format='%h %s' "$c"
+  trailers=$(git log -1 --format='%(trailers:only,unfold)' "$c")
+  if [ -n "$trailers" ]; then
+    printf '%s\n' "$trailers" | sed '/^$/d; s/^/    /'
+  fi
+  if [ -n "$want" ] && ! printf '%s\n' "$trailers" | grep -Fxq -- "$want"; then
+    echo "    MISSING: $want"
+    missing+=("$(git rev-parse --short "$c")")
+  fi
+done
+
+if [ -n "$want" ]; then
+  if [ "${#missing[@]}" -gt 0 ]; then
+    echo "commit-check: ${#missing[@]} of ${total} commit(s) lack the trailer: ${missing[*]}" >&2
+    exit 1
+  fi
+  echo "commit-check: all ${total} commit(s) carry the trailer"
+fi

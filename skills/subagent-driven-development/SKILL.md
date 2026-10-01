@@ -212,7 +212,7 @@ Template: [implementer-prompt.md](implementer-prompt.md)
 
 Implementer subagents report one of four statuses. Handle each appropriately:
 
-**DONE:** Render the task review (`bash scripts/dispatch reviewer PLAN_FILE N BASE HEAD`, from this skill's directory — it generates the review package and prints the one-line prompt; BASE is the commit you recorded before dispatching the implementer — never `HEAD~1`, which silently drops all but the last commit of a multi-commit task), then dispatch the task reviewer with that line.
+**DONE:** Render the task review (`bash scripts/dispatch reviewer PLAN_FILE N BASE HEAD`, from this skill's directory — it generates the review package and prints the one-line prompt; BASE is the commit you recorded before dispatching the implementer — never `HEAD~1`, which silently drops all but the last commit of a multi-commit task), then dispatch the task reviewer with that line. If the plan mandates a commit trailer, first run `bash scripts/commit-check BASE HEAD --trailer 'LINE'`: it checks each commit, because a count over several commits has been misread as all present, and implementers have substituted their own model's name. A commit without it goes back to the implementer as a finding.
 
 **DONE_WITH_CONCERNS:** The implementer completed the work but flagged doubts. Read the concerns before proceeding. If the concerns are about correctness or scope, address them before review. If they're observations (e.g., "this file is getting large"), note them and proceed to review.
 

@@ -72,7 +72,8 @@ argues from the spec, so the spec travels with it; executors read both]
 [The spec's project-wide requirements — version floors, dependency limits,
 naming and copy rules, platform requirements — one line each, with exact
 values copied verbatim from the spec. Every task's requirements implicitly
-include this section.]
+include this section. A commit trailer the repository mandates belongs
+here, verbatim, so executors can check every commit for it.]
 
 ## Review Focus
 

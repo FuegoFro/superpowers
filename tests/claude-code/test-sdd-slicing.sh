@@ -2,8 +2,9 @@
 # Tests for SDD's plan slicing and dispatch rendering: scripts/task-brief
 # carries the plan's shared header and ends a slab at the next same-or-higher
 # heading; --outline and header modes; scripts/review-package appends the
-# ledger's rulings; scripts/dispatch renders every template with no
-# placeholder left over.
+# ledger's rulings and shows commit trailers; scripts/dispatch renders every
+# template with no placeholder left over; scripts/commit-check fails on any
+# commit that lacks a mandated trailer.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -251,6 +252,48 @@ PLAN
         contains "$file" "Task $i: Component $i" || bad=1
     done
     check "all twelve implementer dispatches render with no placeholder left" test "$bad" -eq 0
+
+    # --- commit-check: per-commit trailer check; review package shows trailers ---
+    local trailer="Co-Authored-By: Example Model <noreply@example.com>"
+    local cbase
+    cbase="$(cd "$repo" && git rev-parse HEAD)"
+    for i in 1 2 3; do
+        echo "$i" > "$repo/c$i.txt"
+        local msg="Commit $i
+
+$trailer"
+        [[ "$i" -eq 2 ]] && msg="Commit $i
+
+Co-Authored-By: Other Model <noreply@example.com>"
+        ( cd "$repo" && git add "c$i.txt" && git "${git_id[@]}" commit -qm "$msg" )
+    done
+    rc=0
+    out="$(cd "$repo" && bash "$SDD_SCRIPTS/commit-check" "$cbase" HEAD --trailer "$trailer" 2>&1)" || rc=$?
+    check "commit-check exits 1 when one commit lacks the trailer" test "$rc" -eq 1
+    local bad_sha
+    bad_sha="$(cd "$repo" && git rev-parse --short HEAD~1)"
+    if [[ "$out" == *"lack the trailer: $bad_sha"* ]]; then
+        pass "commit-check names the commit that lacks it"
+    else
+        fail "commit-check names the commit that lacks it"
+        echo "    got: $out"
+    fi
+    local good_base
+    good_base="$(cd "$repo" && git rev-parse HEAD)"
+    for i in 4 5 6; do
+        echo "$i" > "$repo/c$i.txt"
+        ( cd "$repo" && git add "c$i.txt" && git "${git_id[@]}" commit -qm "Commit $i
+
+$trailer" )
+    done
+    rc=0
+    (cd "$repo" && bash "$SDD_SCRIPTS/commit-check" "$good_base" HEAD --trailer "$trailer" >/dev/null 2>&1) || rc=$?
+    check "commit-check exits 0 when every commit carries it" test "$rc" -eq 0
+    rc=0
+    (cd "$repo" && bash "$SDD_SCRIPTS/commit-check" "$cbase" HEAD --trailer >/dev/null 2>&1) || rc=$?
+    check "commit-check with --trailer but no line exits 2" test "$rc" -eq 2
+    (cd "$repo" && bash "$SDD_SCRIPTS/review-package" plan.md "$cbase" HEAD "$TEST_ROOT/t.diff" >/dev/null)
+    check "review package shows commit trailers" contains "$TEST_ROOT/t.diff" "    $trailer"
 
     echo
     if [[ "$FAILURES" -eq 0 ]]; then
