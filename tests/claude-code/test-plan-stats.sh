@@ -87,6 +87,15 @@ printf '### Task 1: \xe2\x80\x94\n' >"$utf"
 out="$(bash "$PLAN_STATS" "$utf" 2>&1)"
 check "multibyte characters count once" has "$out" "14 chars, 1 lines"
 
+# A ``` block nested in a ````markdown block, then a ~~~ block: the # lines in
+# them are text, so Task 1 runs to Task 2 and all of it is fenced but prose.
+nest="$TEST_ROOT/nest.md"
+printf '%s\n' '### Task 1: README' '````markdown' '# mytool' '```bash' '# from source' '```' '## Usage' '````' \
+    '~~~bash' '# deps' '~~~' 'Step 2.' '### Task 2: Next' 'Next.' >"$nest"
+out="$(bash "$PLAN_STATS" "$nest" 2>&1)"
+check "nested and tilde fences hide their headings" has "$out" ", 2 tasks,"
+check "a nested fence's lines all count as fenced" has "$out" "61% inside code fences"
+
 bash "$PLAN_STATS" >/dev/null 2>&1 && rc=0 || rc=$?
 check "no arguments exits 2" test "$rc" -eq 2
 bash "$PLAN_STATS" "$TEST_ROOT/missing.md" >/dev/null 2>&1 && rc=0 || rc=$?

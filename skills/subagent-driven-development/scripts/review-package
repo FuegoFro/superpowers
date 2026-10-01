@@ -4,8 +4,9 @@
 # call. Using the recorded per-task BASE (not HEAD~1) keeps multi-commit
 # tasks intact.
 #
-# When the plan's ledger exists, the package ends with its Ruling:, parked
-# and deferred-minor lines, so a reviewer weighs the calls already made from
+# When the plan's ledger exists, the package ends with its Ruling: lines
+# (parked findings carry one) and deferred minors, so a reviewer weighs the
+# calls already made from
 # the same file instead of being handed the plan (--no-ledger leaves them out;
 # scoped re-reviews do not need them).
 #
@@ -72,7 +73,7 @@ fi
     echo "the code and grade independently: a ruling is a claim to check, like the"
     echo "implementer's report, never a reason to withhold or downgrade a finding."
     echo
-    grep -E 'Ruling:|parked|minor \(deferred\)' "$dir/progress.md" || echo "(none yet)"
+    grep -E 'Ruling:|minor \(deferred\)' "$dir/progress.md" || echo "(none yet)"
   fi
 } > "$out"
 

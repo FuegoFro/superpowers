@@ -4,7 +4,7 @@
 # task slab or a ratio past the thresholds below and exits 1 if anything is
 # flagged (2 on bad arguments).
 #
-# Defaults come from one week of plans written to this skill: plans of 86k-225k
+# Defaults come from one week of plans written to this skill: plans of 85k-225k
 # chars, one 6.3x its spec, read back in 16-22 chunks by revision agents. 25,000
 # chars is about 6k tokens, more than one implementer should absorb for a task;
 # a plan over 4x its spec is usually a transcript of the code.
@@ -23,8 +23,21 @@ count() { LC_ALL=C awk '{ gsub(/[\200-\277]/, ""); n += length($0) + 1 } END { p
 
 LC_ALL=C awk -v max_task="$MAX_TASK_CHARS" -v plan="$1" '
   function close_task() { if (task != "") { rows[++nr] = sprintf("  %-10s %8d chars", task, tchars); if (tchars > max_task) flags[++nf] = task " is " tchars " chars (over " max_task "): split it, or replace bodies with signatures and tests" } task = "" }
+  # Fences after CommonMark, as in SDD task-brief: a run of 3+ backticks or
+  # tildes opens; only a run of the same character at least as long closes.
+  function isfence(s,   ch, k) {
+    sub(/^[ \t]+/, "", s)
+    ch = substr(s, 1, 1)
+    if (ch != "`" && ch != "~") return 0
+    k = 0
+    while (substr(s, k + 1, 1) == ch) k++
+    if (k < 3) return 0
+    if (!infence) { infence = 1; fch = ch; flen = k; return 1 }
+    if (ch == fch && k >= flen && substr(s, k + 1) ~ /^[ \t\r]*$/) { infence = 0; return 1 }
+    return 0
+  }
   { line = $0; gsub(/[\200-\277]/, "", line); c = length(line) + 1; total += c }
-  /^```/ { fence += c; infence = !infence; if (task != "") tchars += c; next }
+  isfence($0) { fence += c; if (task != "") tchars += c; next }
   infence { fence += c }
   !infence && /^#+[ \t]/ {
     level = match($0, /[^#]/) - 1

@@ -39,20 +39,40 @@ plan=${args[0]}
 n=${args[1]}
 [ -f "$plan" ] || { echo "no such plan file: $plan" >&2; exit 2; }
 
+# Fence tracking for the awk programs below, after CommonMark: a fence opens
+# with a run of three or more backticks or tildes and closes only on a run of
+# the same character at least as long with nothing after it. A slab ends at
+# the next heading, so a fence the tracker loses turns every "# comment" in
+# a code block into a heading that cuts the task short; plans nest ``` blocks
+# inside ````markdown ones (writing-plans' own task template) and use ~~~.
+FENCE_AWK='
+function fence(s,   c, k) {
+  sub(/^[ \t]+/, "", s)
+  c = substr(s, 1, 1)
+  if (c != "`" && c != "~") return 0
+  k = 0
+  while (substr(s, k + 1, 1) == c) k++
+  if (k < 3) return 0
+  if (!infence) { infence = 1; fch = c; flen = k; return 1 }
+  if (c == fch && k >= flen && substr(s, k + 1) ~ /^[ \t\r]*$/) { infence = 0; return 1 }
+  return 0
+}
+'
+
 # Split the plan into sections, one tab-separated row each:
 #   KIND  START  END  BYTES  LABEL
-# KIND is header (before the first Task heading), task:<N>, or outside (a
-# heading at or above the current task's level that is not a Task heading).
-# Rows partition the file, so their byte counts sum to its size. Fence-aware:
-# a heading inside a code block is text.
+# KIND is header (before the first Task heading; absent when the plan opens
+# with one), task:<N>, or outside (a heading at or above the current task's
+# level that is not a Task heading). Rows partition the file, so their byte
+# counts sum to its size. Fence-aware: a heading inside a code block is text.
 sections() {
-  LC_ALL=C awk '
+  LC_ALL=C awk "$FENCE_AWK"'
     function flush() {
-      if (start) printf "%s\t%d\t%d\t%d\t%s\n", kind, start, NR - 1, bytes, label
+      if (start && NR - 1 >= start) printf "%s\t%d\t%d\t%d\t%s\n", kind, start, NR - 1, bytes, label
     }
     function open(k, l) { flush(); kind = k; label = l; start = NR; bytes = 0 }
     BEGIN { kind = "header"; label = "(before the first task)"; start = 1 }
-    /^```/ { infence = !infence }
+    { fence($0) }
     !infence && /^#+[ \t]/ {
       level = match($0, /[^#]/) - 1
       if ($0 ~ /^#+[ \t]+Task[ \t]+[0-9]+/) {
@@ -99,13 +119,13 @@ table=$(sections "$plan")
 print_header() {
   printf '%s\n' "$table" | awk -F '\t' '$1 == "header" { print $2, $3 }' | {
     read -r a b || return 0
-    sed -n "${a},${b}p" "$plan" | awk '
-      /^```/ { infence = !infence }
+    sed -n "${a},${b}p" "$plan" | awk "$FENCE_AWK"'
+      { fence($0) }
       !infence && !seen && /^#[ \t]/ { seen = 1; next }
       { lines[++c] = $0 }
       END {
-        s = 1; while (s <= c && lines[s] ~ /^[ \t]*$/) s++
-        e = c; while (e >= s && lines[e] ~ /^[ \t]*$/) e--
+        s = 1; while (s <= c && lines[s] ~ /^[ \t\r]*$/) s++
+        e = c; while (e >= s && lines[e] ~ /^[ \t\r]*$/) e--
         for (i = s; i <= e; i++) print lines[i]
       }'
   }

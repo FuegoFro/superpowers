@@ -78,10 +78,26 @@ body_of() {
   ' "$1"
 }
 
+# Fence tracking as in task-brief (CommonMark: a run of 3+ backticks or tildes
+# opens; only a run of the same character at least as long closes).
+FENCE_AWK='
+function fence(s,   c, k) {
+  sub(/^[ \t]+/, "", s)
+  c = substr(s, 1, 1)
+  if (c != "`" && c != "~") return 0
+  k = 0
+  while (substr(s, k + 1, 1) == c) k++
+  if (k < 3) return 0
+  if (!infence) { infence = 1; fch = c; flen = k; return 1 }
+  if (c == fch && k >= flen && substr(s, k + 1) ~ /^[ \t\r]*$/) { infence = 0; return 1 }
+  return 0
+}
+'
+
 # The plan's Global Constraints section, verbatim, without its heading.
 constraints_of() {
-  awk '
-    /^```/ { infence = !infence }
+  awk "$FENCE_AWK"'
+    { fence($0) }
     !infence && /^#+[ \t]/ {
       level = match($0, /[^#]/) - 1
       if (on && level <= onlevel) exit
@@ -93,6 +109,16 @@ constraints_of() {
 
 short() { git rev-parse --short "$1"; }
 
+# A reviewer reads the brief the implementer worked from, so an existing one
+# is reused rather than re-cut (which would also drop any hand edit to it).
+brief_for() {
+  local f="$ws/task-${1}-brief.md"
+  if [ -s "$f" ]; then printf '%s\n' "$f"; else run task-brief "$plan" "$1" | wrote; fi
+}
+
+# The plan's shared header file, or nothing when the plan has none.
+header_file() { run task-brief "$plan" header 2>/dev/null | wrote || true; }
+
 case "$role" in
   implementer)
     [ "${#args[@]}" -eq 3 ] || usage
@@ -100,22 +126,25 @@ case "$role" in
     brief=$(run task-brief "$plan" "$n" | wrote)
     report="${brief%-brief.md}-report.md"
     name=$(sed -n 's/^#\{1,\}[ \t]*Task[ \t]*'"$n"'[^0-9][: \t]*//p' "$brief" | head -n 1)
+    title="Task ${n}${name:+: $name}"
     out="$ws/task-${n}-implementer.md"
-    body=$(body_of "$skill/implementer-prompt.md")
-    body=${body//"Task N: [task name]"/"Task ${n}: ${name}"}
+    tmpl="$skill/implementer-prompt.md"
+    body=$(body_of "$tmpl")
+    body=${body//"Task N: [task name]"/"$title"}
     body=${body//"[BRIEF_FILE]"/"$brief"}
     context=${note:-"(Nothing beyond the brief.)"}
     body=${body//"[Scene-setting: where this fits, dependencies, architectural context]"/"$context"}
     body=${body//"[directory]"/"$repo"}
     body=${body//"[REPORT_FILE]"/"$report"}
-    desc="Implement Task ${n}: ${name}"
+    filled=(BRIEF_FILE REPORT_FILE)
+    desc="Implement ${title}"
     ;;
   reviewer)
     [ "${#args[@]}" -eq 5 ] || usage
     n=${args[2]}
     base=$(sha "${args[3]}")
     head=$(sha "${args[4]}")
-    brief=$(run task-brief "$plan" "$n" 2>/dev/null | wrote)
+    brief=$(brief_for "$n")
     report="${brief%-brief.md}-report.md"
     diff=$(run review-package "$plan" "$base" "$head" | wrote)
     gc=$(constraints_of "$plan")
@@ -125,13 +154,15 @@ case "$role" in
 From the controller:
 ${note}"; fi
     out="$ws/task-${n}-review-$(short "$base")..$(short "$head").md"
-    body=$(body_of "$skill/task-reviewer-prompt.md")
+    tmpl="$skill/task-reviewer-prompt.md"
+    body=$(body_of "$tmpl")
     body=${body//"[BRIEF_FILE]"/"$brief"}
     body=${body//"[GLOBAL_CONSTRAINTS]"/"$gc"}
     body=${body//"[REPORT_FILE]"/"$report"}
     body=${body//"[BASE_SHA]"/"$base"}
     body=${body//"[HEAD_SHA]"/"$head"}
     body=${body//"[DIFF_FILE]"/"$diff"}
+    filled=(BRIEF_FILE GLOBAL_CONSTRAINTS REPORT_FILE BASE_SHA HEAD_SHA DIFF_FILE)
     desc="Review Task ${n} (spec + quality)"
     ;;
   re-review)
@@ -141,43 +172,54 @@ ${note}"; fi
     base=$(sha "${args[3]}")
     head=$(sha "${args[4]}")
     if [ "$n" = final ]; then
-      brief=$(run task-brief "$plan" header | wrote)
+      brief=$(header_file)
+      [ -n "$brief" ] || brief=$plan_abs
       report="$ws/final-fix-report.md"
     else
-      brief=$(run task-brief "$plan" "$n" 2>/dev/null | wrote)
+      brief=$(brief_for "$n")
       report="${brief%-brief.md}-report.md"
     fi
     diff=$(run review-package "$plan" "$base" "$head" --no-ledger | wrote)
     out="$ws/task-${n}-rereview-$(short "$base")..$(short "$head").md"
-    body=$(body_of "$skill/re-review-prompt.md")
+    tmpl="$skill/re-review-prompt.md"
+    body=$(body_of "$tmpl")
     body=${body//"[BRIEF_FILE]"/"$brief"}
     body=${body//"[FINDINGS]"/"$note"}
     body=${body//"[REPORT_FILE]"/"$report"}
     body=${body//"[FIX_BASE_SHA]"/"$base"}
     body=${body//"[HEAD_SHA]"/"$head"}
     body=${body//"[DIFF_FILE]"/"$diff"}
+    filled=(BRIEF_FILE FINDINGS REPORT_FILE FIX_BASE_SHA HEAD_SHA DIFF_FILE)
     desc="Re-review Task ${n} fix"
     ;;
   final)
     [ "${#args[@]}" -eq 4 ] || usage
     base=$(sha "${args[2]}")
     head=$(sha "${args[3]}")
-    header=$(run task-brief "$plan" header | wrote)
+    header=$(header_file)
     diff=$(run review-package "$plan" "$base" "$head" | wrote)
-    reqs="Read the plan's shared header first: ${header}
+    if [ -n "$header" ]; then
+      reqs="Read the plan's shared header first: ${header}
 It holds the Goal, the Global Constraints, the Review Focus (check each of its
-lines deliberately) and any amendments. The full plan is ${plan_abs}: open a
+lines deliberately) and any amendments."
+    else
+      reqs="The plan has no shared header before its first task (no Goal, Global
+Constraints or Review Focus section): review against the tasks themselves."
+    fi
+    reqs="${reqs} The full plan is ${plan_abs}: open a
 task's text only for a question the diff raises (\`grep -n '^#.*Task' ${plan_abs}\`
 finds it) rather than reading the whole file.
 
 Review package: ${diff}"
     out="$ws/final-review-$(short "$base")..$(short "$head").md"
-    body=$(body_of "$skill/../requesting-code-review/code-reviewer.md")
+    tmpl="$skill/../requesting-code-review/code-reviewer.md"
+    body=$(body_of "$tmpl")
     desc_text=${note:-"See the Goal in the plan's shared header."}
     body=${body//"[DESCRIPTION]"/"$desc_text"}
     body=${body//"[PLAN_OR_REQUIREMENTS]"/"$reqs"}
     body=${body//"[BASE_SHA]"/"$base"}
     body=${body//"[HEAD_SHA]"/"$head"}
+    filled=(DESCRIPTION PLAN_OR_REQUIREMENTS BASE_SHA HEAD_SHA)
     desc="Final whole-branch review"
     ;;
   *) usage ;;
@@ -185,9 +227,15 @@ esac
 
 [ -n "$body" ] || { echo "template for ${role} has no prompt body" >&2; exit 1; }
 
-# A bracketed upper-case name left in the body is a placeholder nobody filled.
-# [SHA] is the reviewer's own placeholder in code-reviewer.md's worktree example.
-left=$(printf '%s\n' "$body" | grep -oE '\[[A-Z][A-Z_]{2,}\]' | grep -vx '\[SHA\]' | sort -u || true)
+# A bracketed upper-case name in the template that this role does not fill is
+# a placeholder nobody filled: the template gained one this script does not
+# know. Checked on the template, not the rendered text, because the plan's
+# constraints and the controller's note are pasted in verbatim and carry
+# bracketed words of their own ("[INFO]", "[TODO]"). [SHA] is the reviewer's
+# own placeholder in code-reviewer.md's worktree example.
+left=$(body_of "$tmpl" | { grep -oE '\[[A-Z][A-Z_]{2,}\]' || true; } | sort -u | while read -r p; do
+  case " ${filled[*]} SHA " in *" ${p:1:${#p}-2} "*) ;; *) printf '%s ' "$p" ;; esac
+done)
 if [ -n "$left" ]; then
   echo "unfilled placeholders in the ${role} dispatch: $(printf '%s' "$left" | tr '\n' ' ')" >&2
   exit 1

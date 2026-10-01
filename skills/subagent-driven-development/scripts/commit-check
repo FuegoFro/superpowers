@@ -5,9 +5,13 @@
 # read as all present, and implementers have committed with their own model's
 # name in place of the trailer the plan mandated.
 #
+# Only the task's own commits are checked: first-parent history, merges left
+# out, so a merge from main does not flag main's commits.
+#
 # Usage: commit-check BASE HEAD [--trailer LINE]
 # Exit: 0 when every commit carries LINE (or no --trailer), 1 when one lacks
-# it, 2 on bad arguments.
+# it, 2 on bad arguments, 3 when the range is empty or HEAD does not descend
+# from BASE (an implementer that never committed must not pass).
 set -euo pipefail
 
 usage() {
@@ -27,9 +31,13 @@ fi
 git rev-parse --verify --quiet "$base^{commit}" >/dev/null || { echo "bad BASE: $base" >&2; exit 2; }
 git rev-parse --verify --quiet "$head^{commit}" >/dev/null || { echo "bad HEAD: $head" >&2; exit 2; }
 
+git merge-base --is-ancestor "$base" "$head" || { echo "HEAD is not a descendant of BASE: ${base}..${head}" >&2; exit 3; }
+commits=$(git rev-list --reverse --first-parent --no-merges "${base}..${head}")
+[ -n "$commits" ] || { echo "no commits in ${base}..${head}" >&2; exit 3; }
+
 missing=()
 total=0
-for c in $(git rev-list --reverse "${base}..${head}"); do
+for c in $commits; do
   total=$((total + 1))
   git log -1 --format='%h %s' "$c"
   trailers=$(git log -1 --format='%(trailers:only,unfold)' "$c")
@@ -37,7 +45,13 @@ for c in $(git rev-list --reverse "${base}..${head}"); do
     printf '%s\n' "$trailers" | sed '/^$/d; s/^/    /'
   fi
   if [ -n "$want" ] && ! printf '%s\n' "$trailers" | grep -Fxq -- "$want"; then
-    echo "    MISSING: $want"
+    # git reads trailers only from a final paragraph made of trailer lines;
+    # a line glued to the prose above it is text, so say where it went wrong.
+    if git log -1 --format='%B' "$c" | grep -Fxq -- "$want"; then
+      echo "    NOT A TRAILER: the line is in the message but not in its final trailer block (a blank line must separate it from the prose)"
+    else
+      echo "    MISSING: $want"
+    fi
     missing+=("$(git rev-parse --short "$c")")
   fi
 done

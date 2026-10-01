@@ -13,6 +13,9 @@ SDD_SCRIPTS="$REPO_ROOT/skills/subagent-driven-development/scripts"
 
 FAILURES=0
 TEST_ROOT=""
+# The templates' own placeholders. A rendered prompt may legitimately carry
+# other bracketed words, copied in from the plan or the controller's note.
+PLACEHOLDERS='\[(BRIEF_FILE|REPORT_FILE|GLOBAL_CONSTRAINTS|BASE_SHA|HEAD_SHA|DIFF_FILE|FINDINGS|FIX_BASE_SHA|DESCRIPTION|PLAN_OR_REQUIREMENTS)\]'
 
 pass() { echo "  [PASS] $1"; }
 fail() {
@@ -178,6 +181,7 @@ PLAN
         echo "Task 1: Ruling: keep the LF rule — spec says so — cost if wrong: one rewrite"
         echo "Task 1: minor (deferred): rename helper"
         echo "Task 1: complete (commits aaaaaaa..bbbbbbb, review clean)"
+        echo "Task 2: complete (commits ccccccc..ddddddd, 1 parked)"
     } > "$ws/progress.md"
     echo one > "$repo/a.txt"
     ( cd "$repo" && git add a.txt && git "${git_id[@]}" commit -qm "Task 1" )
@@ -187,6 +191,7 @@ PLAN
     check "review package carries Ruling: lines" contains "$pkg" "Ruling: keep the LF rule"
     check "review package carries deferred minors" contains "$pkg" "minor (deferred): rename helper"
     check "review package leaves out completion lines" lacks "$pkg" "review clean"
+    check "review package leaves out a completion line that counts parked findings" lacks "$pkg" "1 parked"
     (cd "$repo" && bash "$SDD_SCRIPTS/review-package" plan.md HEAD~1 HEAD "$TEST_ROOT/nl.diff" --no-ledger >/dev/null)
     check "--no-ledger leaves the section out" lacks "$TEST_ROOT/nl.diff" "Prior rulings"
 
@@ -216,9 +221,9 @@ PLAN
         file="$(printf '%s\n' "$out" | sed -n 's/^wrote \(.*\): .*/\1/p')"
         prompt="$(printf '%s\n' "$out" | sed -n 's/^prompt: //p')"
         check "dispatch $label: rendered file exists" test -s "$file"
-        if grep -oE '\[[A-Z][A-Z_]{2,}\]' "$file" | grep -vqx '\[SHA\]'; then
+        if grep -qE "$PLACEHOLDERS" "$file"; then
             fail "dispatch $label: no placeholder left"
-            grep -oE '\[[A-Z][A-Z_]{2,}\]' "$file" | sed 's/^/    left: /'
+            grep -oE "$PLACEHOLDERS" "$file" | sed 's/^/    left: /'
         else
             pass "dispatch $label: no placeholder left"
         fi
@@ -248,10 +253,112 @@ PLAN
     for i in $(seq 1 12); do
         out="$(cd "$repo" && bash "$SDD_SCRIPTS/dispatch" implementer big.md "$i" 2>/dev/null)" || { bad=1; continue; }
         file="$(printf '%s\n' "$out" | sed -n 's/^wrote \(.*\): .*/\1/p')"
-        if grep -qE '\[[A-Z][A-Z_]{2,}\]' "$file"; then bad=1; fi
+        if grep -qE "$PLACEHOLDERS" "$file"; then bad=1; fi
         contains "$file" "Task $i: Component $i" || bad=1
     done
     check "all twelve implementer dispatches render with no placeholder left" test "$bad" -eq 0
+
+    # --- fences the tracker must not lose: ``` nested in ````, and ~~~ ---
+    cat > "$repo/fences.md" <<'PLAN'
+# Fence Plan
+
+## Global Constraints
+
+- Log lines start with [INFO], [WARN] or [ERROR].
+
+### Task 1: Write the README
+
+Create README.md with exactly:
+
+````markdown
+# mytool
+
+## Install
+
+```bash
+# from source
+make install
+```
+
+## Usage
+
+Run it.
+````
+
+~~~bash
+# install deps
+npm ci
+~~~
+
+- [ ] Step 2: commit
+
+### Task 2: Next
+
+Next step.
+PLAN
+    : > "$err"
+    (cd "$repo" && bash "$SDD_SCRIPTS/task-brief" fences.md 1 >/dev/null 2>"$err")
+    local fb="$repo/.superpowers/sdd/fences/task-1-brief.md"
+    check "a nested fence keeps the rest of the task" contains "$fb" "Run it."
+    check "a ~~~ fence keeps the rest of the task" contains "$fb" "npm ci"
+    check "the task's last step survives both fences" contains "$fb" "Step 2: commit"
+    check "the slab still ends at the next task" lacks "$fb" "Next step."
+    check "no code line is reported as a section outside the tasks" lacks "$err" "# from source"
+
+    # --- dispatch: bracketed words from the plan or the note are not placeholders ---
+    echo "Leave the [TODO] marker in place." > "$TEST_ROOT/todo-note.md"
+    rc=0
+    out="$(cd "$repo" && bash "$SDD_SCRIPTS/dispatch" reviewer fences.md 1 HEAD~1 HEAD --note "$TEST_ROOT/todo-note.md" 2>&1)" || rc=$?
+    check "dispatch renders when the constraints and note hold bracketed words" test "$rc" -eq 0
+    file="$(printf '%s\n' "$out" | sed -n 's/^wrote \(.*\): .*/\1/p')"
+    check "the rendered reviewer prompt keeps [INFO], [WARN] or [ERROR]" contains "$file" "[INFO], [WARN] or [ERROR]"
+    check "the rendered reviewer prompt keeps the note's [TODO]" contains "$file" "[TODO]"
+    check "dispatch resolves HEAD~1 to a full SHA" contains "$file" "$(cd "$repo" && git rev-parse HEAD~1)"
+
+    # A reviewer reads the brief the implementer worked from.
+    echo "HAND EDIT" >> "$fb"
+    (cd "$repo" && bash "$SDD_SCRIPTS/dispatch" reviewer fences.md 1 HEAD~1 HEAD >/dev/null 2>&1) || true
+    check "dispatch reviewer reuses the existing brief" contains "$fb" "HAND EDIT"
+
+    rc=0
+    out="$(cd "$repo" && bash "$SDD_SCRIPTS/dispatch" reviewer fences.md 7 HEAD~1 HEAD 2>&1)" || rc=$?
+    check "dispatch reviewer for a missing task exits 3" test "$rc" -eq 3
+    if [[ "$out" == *"task 7 not found"* ]]; then
+        pass "dispatch reviewer for a missing task says so"
+    else
+        fail "dispatch reviewer for a missing task says so"
+        echo "    got: $out"
+    fi
+
+    # A template placeholder the script does not fill is refused.
+    local sk="$TEST_ROOT/skills"
+    mkdir -p "$sk"
+    cp -R "$REPO_ROOT/skills/subagent-driven-development" "$REPO_ROOT/skills/requesting-code-review" "$sk/"
+    awk '{ print } /^  prompt: \|$/ { print "    Also read [NEW_PLACEHOLDER]." }' \
+        "$REPO_ROOT/skills/subagent-driven-development/task-reviewer-prompt.md" \
+        > "$sk/subagent-driven-development/task-reviewer-prompt.md"
+    rc=0
+    out="$(cd "$repo" && bash "$sk/subagent-driven-development/scripts/dispatch" reviewer fences.md 1 HEAD~1 HEAD 2>&1)" || rc=$?
+    check "dispatch refuses a template placeholder it does not fill" test "$rc" -eq 1
+    if [[ "$out" == *"[NEW_PLACEHOLDER]"* ]]; then
+        pass "dispatch names the unfilled placeholder"
+    else
+        fail "dispatch names the unfilled placeholder"
+        echo "    got: $out"
+    fi
+
+    # --- a plan with no shared header ---
+    printf '### Task 1: Alpha\n\nDo alpha.\n' > "$repo/nohdr.md"
+    rc=0
+    (cd "$repo" && bash "$SDD_SCRIPTS/task-brief" nohdr.md header >/dev/null 2>&1) || rc=$?
+    check "header mode on a plan with no header exits 3" test "$rc" -eq 3
+    (cd "$repo" && bash "$SDD_SCRIPTS/task-brief" nohdr.md 1 >/dev/null 2>&1) || true
+    check "a plan with no header gets no fake shared header" lacks "$repo/.superpowers/sdd/nohdr/task-1-brief.md" "Shared header"
+    rc=0
+    out="$(cd "$repo" && bash "$SDD_SCRIPTS/dispatch" final nohdr.md HEAD~1 HEAD 2>&1)" || rc=$?
+    check "dispatch final renders for a plan with no header" test "$rc" -eq 0
+    file="$(printf '%s\n' "$out" | sed -n 's/^wrote \(.*\): .*/\1/p')"
+    check "dispatch final says the plan has no shared header" contains "$file" "no shared header"
 
     # --- commit-check: per-commit trailer check; review package shows trailers ---
     local trailer="Co-Authored-By: Example Model <noreply@example.com>"
@@ -292,6 +399,48 @@ $trailer" )
     rc=0
     (cd "$repo" && bash "$SDD_SCRIPTS/commit-check" "$cbase" HEAD --trailer >/dev/null 2>&1) || rc=$?
     check "commit-check with --trailer but no line exits 2" test "$rc" -eq 2
+    rc=0
+    (cd "$repo" && bash "$SDD_SCRIPTS/commit-check" HEAD HEAD --trailer "$trailer" >/dev/null 2>&1) || rc=$?
+    check "commit-check on an empty range exits 3" test "$rc" -eq 3
+    rc=0
+    (cd "$repo" && bash "$SDD_SCRIPTS/commit-check" HEAD HEAD~1 --trailer "$trailer" >/dev/null 2>&1) || rc=$?
+    check "commit-check with a HEAD that does not descend from BASE exits 3" test "$rc" -eq 3
+
+    # A merge from another branch: neither the merge nor the merged-in
+    # commits are the task's own.
+    local mbase
+    mbase="$(cd "$repo" && git rev-parse HEAD)"
+    (
+        cd "$repo"
+        git checkout -qb side
+        echo s > s.txt && git add s.txt && git "${git_id[@]}" commit -qm "side work"
+        git checkout -q main
+        echo m > m.txt && git add m.txt && git "${git_id[@]}" commit -qm "Main work
+
+$trailer"
+        git "${git_id[@]}" merge -q --no-ff side -m "Merge side"
+    )
+    rc=0
+    (cd "$repo" && bash "$SDD_SCRIPTS/commit-check" "$mbase" HEAD --trailer "$trailer" >/dev/null 2>&1) || rc=$?
+    check "commit-check skips a merge and the commits it brought in" test "$rc" -eq 0
+
+    # The line glued to the prose above it is not a trailer git can parse.
+    local tbase
+    tbase="$(cd "$repo" && git rev-parse HEAD)"
+    echo 7 > "$repo/c7.txt"
+    ( cd "$repo" && git add c7.txt && git "${git_id[@]}" commit -qm "Commit 7
+
+Explains the change.
+$trailer" )
+    rc=0
+    out="$(cd "$repo" && bash "$SDD_SCRIPTS/commit-check" "$tbase" HEAD --trailer "$trailer" 2>&1)" || rc=$?
+    check "commit-check fails a trailer git does not parse" test "$rc" -eq 1
+    if [[ "$out" == *"NOT A TRAILER"* ]]; then
+        pass "commit-check says the line is there but not a trailer"
+    else
+        fail "commit-check says the line is there but not a trailer"
+        echo "    got: $out"
+    fi
     (cd "$repo" && bash "$SDD_SCRIPTS/review-package" plan.md "$cbase" HEAD "$TEST_ROOT/t.diff" >/dev/null)
     check "review package shows commit trailers" contains "$TEST_ROOT/t.diff" "    $trailer"
 
